@@ -30,6 +30,8 @@ const initialElements = isElementsInLocal();
 export function AppContextProvider({ children }) {
   const [session, setSession] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [selectionBounds, setSelectionBounds] = useState(null);
   const [elements, setElements, undo, redo] = useHistory(
     initialElements,
     session
@@ -52,6 +54,7 @@ export function AppContextProvider({ children }) {
     fill: BACKGROUND_COLORS[0],
     opacity: 100,
   });
+  const [showGrid, setShowGrid] = useState(true);
 
   useEffect(() => {
     if (session == null) {
@@ -165,10 +168,16 @@ export function AppContextProvider({ children }) {
         setStyle,
         selectedElement,
         setSelectedElement,
+        selectedElements,
+        setSelectedElements,
+        selectionBounds,
+        setSelectionBounds,
         undo,
         redo,
         session,
         setSession,
+        showGrid,
+        setShowGrid,
       }}
     >
       {children}

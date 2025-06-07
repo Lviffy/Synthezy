@@ -1,5 +1,6 @@
 import React from "react";
 import { useAppContext } from "../provider/AppStates";
+import GridToggle from "./GridToggle";
 
 export default function Zoom() {
   const { scale, onZoom } = useAppContext();
@@ -19,6 +20,7 @@ export default function Zoom() {
       <button className="zoom in" onMouseDown={() => onZoom(0.1)}>
         +
       </button>
+      <GridToggle />
     </section>
   );
 }

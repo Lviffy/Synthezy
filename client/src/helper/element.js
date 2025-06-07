@@ -256,3 +256,94 @@ export function uploadElements(setElements) {
   fileInput.onchange = uploadJSON;
   fileInput.click();
 }
+
+// Multi-selection helper functions
+export function isElementInSelectionBounds(element, bounds) {
+  const { x1: bx1, y1: by1, x2: bx2, y2: by2 } = bounds;
+  const { x1: ex1, y1: ey1, x2: ex2, y2: ey2 } = element;
+
+  // Normalize coordinates
+  const minBx = Math.min(bx1, bx2);
+  const maxBx = Math.max(bx1, bx2);
+  const minBy = Math.min(by1, by2);
+  const maxBy = Math.max(by1, by2);
+
+  const minEx = Math.min(ex1, ex2);
+  const maxEx = Math.max(ex1, ex2);
+  const minEy = Math.min(ey1, ey2);
+  const maxEy = Math.max(ey1, ey2);
+
+  // Check if element is partially or fully within bounds
+  return !(maxEx < minBx || minEx > maxBx || maxEy < minBy || minEy > maxBy);
+}
+
+export function getElementsInSelectionBounds(elements, bounds) {
+  return elements.filter((element) =>
+    isElementInSelectionBounds(element, bounds)
+  );
+}
+
+export function getSelectionBounds(selectedElements) {
+  if (selectedElements.length === 0) return null;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  selectedElements.forEach((element) => {
+    const { x1, y1, x2, y2 } = element;
+    minX = Math.min(minX, x1, x2);
+    minY = Math.min(minY, y1, y2);
+    maxX = Math.max(maxX, x1, x2);
+    maxY = Math.max(maxY, y1, y2);
+  });
+
+  return { x1: minX, y1: minY, x2: maxX, y2: maxY };
+}
+
+export function deleteMultipleElements(selectedElements, setState, setSelectedElement, setSelectedElements) {
+  if (selectedElements.length === 0) return;
+
+  const selectedIds = selectedElements.map(el => el.id);
+  setState((prevState) => prevState.filter((element) => !selectedIds.includes(element.id)));
+  setSelectedElement(null);
+  setSelectedElements([]);
+}
+
+export function updateMultipleElements(selectedElements, styleUpdates, setState, state) {
+  if (selectedElements.length === 0) return;
+
+  const selectedIds = selectedElements.map(el => el.id);
+  setState((prevState) => 
+    prevState.map((element) => {
+      if (selectedIds.includes(element.id)) {
+        return { ...element, ...styleUpdates };
+      }
+      return element;
+    })
+  );
+}
+
+export function duplicateMultipleElements(selectedElements, setState, setSelectedElements, factor) {
+  if (selectedElements.length === 0) return;
+
+  const duplicatedElements = [];
+  
+  setState((prevState) => {
+    const newElements = [...prevState];
+    
+    selectedElements.forEach((element) => {
+      const duplicated = { 
+        ...moveElement(element, factor), 
+        id: uuid() 
+      };
+      duplicatedElements.push(duplicated);
+      newElements.push(duplicated);
+    });
+    
+    return newElements;
+  });
+  
+  setSelectedElements(duplicatedElements);
+}

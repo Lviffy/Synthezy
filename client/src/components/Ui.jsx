@@ -8,7 +8,7 @@ import Collaboration from "./Collaboration";
 import Credits from "./Credits";
 
 export default function Ui() {
-  const { selectedElement, selectedTool, style } = useAppContext();
+  const { selectedElement, selectedElements, selectedTool, style } = useAppContext();
 
   return (
     <main className="ui">
@@ -17,8 +17,8 @@ export default function Ui() {
         <ToolBar />
         <Collaboration />
       </header>
-      {(!["selection", "hand"].includes(selectedTool) || selectedElement) && (
-        <Style selectedElement={selectedElement || style} />
+      {(!["selection", "hand"].includes(selectedTool) || selectedElement || selectedElements.length > 0) && (
+        <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />
       )}
 
       <footer>

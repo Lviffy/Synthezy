@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import Canvas from "../components/Canvas";
+import Grid from "../components/Grid";
+import SelectionRectangle from "../components/SelectionRectangle";
 import Ui from "../components/Ui";
 import { useSearchParams } from "react-router-dom";
 import { useAppContext } from "../provider/AppStates";
@@ -20,8 +22,10 @@ export default function WorkSpace() {
 
   return (
     <>
+      <Grid />
       <Ui />
       <Canvas />
+      <SelectionRectangle />
     </>
   );
 }

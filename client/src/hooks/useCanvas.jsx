@@ -5,6 +5,7 @@ import { lockUI } from "../helper/ui";
 import {
   draw,
   drawFocuse,
+  drawMultiSelection,
   cornerCursor,
   inSelectedCorner,
 } from "../helper/canvas";
@@ -13,9 +14,13 @@ import {
   arrowMove,
   createElement,
   deleteElement,
+  deleteMultipleElements,
   duplicateElement,
+  duplicateMultipleElements,
   getElementById,
   getElementPosition,
+  getElementsInSelectionBounds,
+  getSelectionBounds,
   minmax,
   resizeValue,
   saveElements,
@@ -42,6 +47,10 @@ export default function useCanvas() {
     style,
     selectedElement,
     setSelectedElement,
+    selectedElements,
+    setSelectedElements,
+    selectionBounds,
+    setSelectionBounds,
     undo,
     redo,
   } = useAppContext();
@@ -54,6 +63,7 @@ export default function useCanvas() {
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
   const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
   const [resizeOldDementions, setResizeOldDementions] = useState(null)
 
   const mousePosition = ({ clientX, clientY }) => {
@@ -100,13 +110,50 @@ export default function useCanvas() {
             offsetY,
           });
         } else {
-          setElements((prevState) => prevState);
-          setMouseAction({ x: event.clientX, y: event.clientY });
-          setSelectedElement({ ...element, offsetX, offsetY });
+          // Check if element is already in selection
+          const isElementSelected = selectedElements.some(sel => sel.id === element.id);
+          
+          if (event.shiftKey) {
+            // Toggle element in selection
+            if (isElementSelected) {
+              const newSelection = selectedElements.filter(sel => sel.id !== element.id);
+              setSelectedElements(newSelection);
+              setSelectedElement(newSelection.length > 0 ? newSelection[0] : null);
+            } else {
+              const newSelection = [...selectedElements, element];
+              setSelectedElements(newSelection);
+              setSelectedElement(element);
+            }
+            setAction("none"); // Don't start moving when shift-selecting
+          } else {
+            // If element is already part of multi-selection, move all selected elements
+            if (isElementSelected && selectedElements.length > 1) {
+              // Store initial positions of all selected elements for grouped movement
+              setInitialSelectedElements(selectedElements.map(el => {
+                const currentEl = getElementById(el.id, elements);
+                return currentEl ? { ...currentEl } : el;
+              }));
+              setSelectedElement({ ...element, offsetX, offsetY });
+              setMouseAction({ x: clientX, y: clientY }); // Store initial canvas coordinates
+              setAction("move");
+            } else {
+              // Single selection and move - clear multi-selection first
+              setSelectedElements([element]);
+              setSelectedElement({ ...element, offsetX, offsetY });
+              setMouseAction({ x: clientX, y: clientY }); // Store initial canvas coordinates
+              setInitialSelectedElements([]); // Clear any previous multi-selection state
+              setAction("move");
+            }
+          }
         }
-        setAction("move");
       } else {
-        setSelectedElement(null);
+        // Start marquee selection
+        if (!event.shiftKey) {
+          setSelectedElement(null);
+          setSelectedElements([]);
+        }
+        setSelectionBounds({ x1: clientX, y1: clientY, x2: clientX, y2: clientY });
+        setAction("selecting");
       }
 
       return;
@@ -155,22 +202,59 @@ export default function useCanvas() {
         elements,
         true
       );
+    } else if (action == "selecting") {
+      // Update marquee selection bounds
+      setSelectionBounds(prev => ({
+        ...prev,
+        x2: clientX,
+        y2: clientY
+      }));
     } else if (action == "move") {
-      const { id, x1, y1, x2, y2, offsetX, offsetY } = selectedElement;
+      if (selectedElements.length > 1 && initialSelectedElements.length > 0) {
+        // Multi-element movement: calculate delta from initial mouse position
+        const deltaX = clientX - mouseAction.x;
+        const deltaY = clientY - mouseAction.y;
 
-      const width = x2 - x1;
-      const height = y2 - y1;
-
-      const nx = clientX - offsetX;
-      const ny = clientY - offsetY;
-
-      updateElement(
-        id,
-        { x1: nx, y1: ny, x2: nx + width, y2: ny + height },
-        setElements,
-        elements,
-        true
-      );
+        // Move all selected elements by the same delta from their initial positions
+        initialSelectedElements.forEach((initialElement) => {
+          updateElement(
+            initialElement.id,
+            {
+              x1: initialElement.x1 + deltaX,
+              y1: initialElement.y1 + deltaY,
+              x2: initialElement.x2 + deltaX,
+              y2: initialElement.y2 + deltaY
+            },
+            setElements,
+            elements,
+            true
+          );
+        });
+      } else {
+        // Single element movement
+        const { offsetX, offsetY } = selectedElement;
+        const currentX = clientX - offsetX;
+        const currentY = clientY - offsetY;
+        const element = getElementById(selectedElement.id, elements);
+        
+        if (element) {
+          const width = element.x2 - element.x1;
+          const height = element.y2 - element.y1;
+          
+          updateElement(
+            element.id,
+            { 
+              x1: currentX, 
+              y1: currentY, 
+              x2: currentX + width, 
+              y2: currentY + height 
+            },
+            setElements,
+            elements,
+            true
+          );
+        }
+      }
     } else if (action == "translate") {
       const x = clientX - translate.sx;
       const y = clientY - translate.sy;
@@ -196,15 +280,59 @@ export default function useCanvas() {
   };
 
   const handleMouseUp = (event) => {
+    const currentAction = action; // Store current action before resetting
+    
+    // Handle marquee selection before resetting action
+    if (currentAction == "selecting") {
+      // Finalize marquee selection
+      if (selectionBounds) {
+        const selectedInBounds = getElementsInSelectionBounds(elements, selectionBounds);
+        if (event.shiftKey) {
+          // Add to existing selection
+          const newSelection = [...selectedElements];
+          selectedInBounds.forEach(element => {
+            if (!newSelection.some(sel => sel.id === element.id)) {
+              newSelection.push(element);
+            }
+          });
+          setSelectedElements(newSelection);
+          setSelectedElement(newSelection.length > 0 ? newSelection[0] : null);
+        } else {
+          // Replace selection
+          setSelectedElements(selectedInBounds);
+          setSelectedElement(selectedInBounds.length > 0 ? selectedInBounds[0] : null);
+        }
+      }
+      setSelectionBounds(null);
+      setAction("none");
+      lockUI(false);
+      return;
+    }
+    
     setAction("none");
     lockUI(false);
+    
+    // Clear initial positions after movement
+    if (currentAction == "move") {
+      setInitialSelectedElements([]);
+      // Update selectedElements to reflect final positions after group movement
+      if (selectedElements.length > 1) {
+        const updatedElements = selectedElements.map(sel => {
+          const currentElement = getElementById(sel.id, elements);
+          return currentElement || sel;
+        });
+        setSelectedElements(updatedElements);
+      }
+    }
 
-    if (event.clientX == mouseAction.x && event.clientY == mouseAction.y) {
+    // Only revert if no actual movement occurred AND it's not a multi-selection drag
+    const { clientX, clientY } = mousePosition(event);
+    if (clientX == mouseAction.x && clientY == mouseAction.y && currentAction !== "move") {
       setElements("prevState");
       return;
     }
 
-    if (action == "draw") {
+    if (currentAction == "draw") {
       const lastElement = elements.at(-1);
       const { id, x1, y1, x2, y2 } = adjustCoordinates(lastElement);
       updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
@@ -214,7 +342,7 @@ export default function useCanvas() {
       }
     }
 
-    if (action.startsWith("resize")) {
+    if (currentAction.startsWith("resize")) {
       const { id, x1, y1, x2, y2 } = adjustCoordinates(
         getElementById(selectedElement.id, elements)
       );
@@ -269,6 +397,13 @@ export default function useCanvas() {
     });
 
     const pd = minmax(10 / scale, [0.5, 50]);
+    
+    // Draw multi-selection indicators for multiple selected elements
+    if (selectedElements.length > 1) {
+      drawMultiSelection(selectedElements, context, scale);
+    }
+    
+    // Draw focus indicators for the primary selected element
     if (focusedElement != null) {
       drawFocuse(focusedElement, context, pd, scale);
     }
@@ -281,37 +416,157 @@ export default function useCanvas() {
     const keyDownFunction = (event) => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const prevent = () => event.preventDefault();
-      if (selectedElement) {
-        if (key == "Backspace" || key == "Delete") {
+      
+      // Handle multi-selection shortcuts
+      if (ctrlKey || metaKey) {
+        if (key.toLowerCase() === "a") {
+          prevent();
+          // Select all elements
+          setSelectedElements(elements);
+          setSelectedElement(elements.length > 0 ? elements[0] : null);
+          return;
+        }
+      }
+      
+      // Handle delete for multi-selection
+      if (key === "Backspace" || key === "Delete") {
+        if (selectedElements.length > 1) {
+          prevent();
+          deleteMultipleElements(selectedElements, setElements, setSelectedElement, setSelectedElements);
+          return;
+        } else if (selectedElement) {
           prevent();
           deleteElement(selectedElement, setElements, setSelectedElement);
+          return;
         }
-
+      }
+      
+      if (selectedElement) {
         if (ctrlKey && key.toLowerCase() == "d") {
           prevent();
-          duplicateElement(
-            selectedElement,
-            setElements,
-            setSelectedElement,
-            10
-          );
+          if (selectedElements.length > 1) {
+            duplicateMultipleElements(selectedElements, setElements, setSelectedElements, 10);
+          } else {
+            duplicateElement(
+              selectedElement,
+              setElements,
+              setSelectedElement,
+              10
+            );
+          }
         }
 
         if (key == "ArrowLeft") {
           prevent();
-          arrowMove(selectedElement, -1, 0, setElements);
+          if (selectedElements.length > 1) {
+            setElements(prevState => 
+              prevState.map(element => {
+                const selectedEl = selectedElements.find(sel => sel.id === element.id);
+                if (selectedEl) {
+                  return {
+                    ...element,
+                    x1: element.x1 - 1,
+                    x2: element.x2 - 1
+                  };
+                }
+                return element;
+              })
+            );
+            // Update selectedElements state to reflect new positions
+            setSelectedElements(prevSelected => 
+              prevSelected.map(sel => ({
+                ...sel,
+                x1: sel.x1 - 1,
+                x2: sel.x2 - 1
+              }))
+            );
+          } else {
+            arrowMove(selectedElement, -1, 0, setElements);
+          }
         }
         if (key == "ArrowUp") {
           prevent();
-          arrowMove(selectedElement, 0, -1, setElements);
+          if (selectedElements.length > 1) {
+            setElements(prevState => 
+              prevState.map(element => {
+                const selectedEl = selectedElements.find(sel => sel.id === element.id);
+                if (selectedEl) {
+                  return {
+                    ...element,
+                    y1: element.y1 - 1,
+                    y2: element.y2 - 1
+                  };
+                }
+                return element;
+              })
+            );
+            // Update selectedElements state to reflect new positions
+            setSelectedElements(prevSelected => 
+              prevSelected.map(sel => ({
+                ...sel,
+                y1: sel.y1 - 1,
+                y2: sel.y2 - 1
+              }))
+            );
+          } else {
+            arrowMove(selectedElement, 0, -1, setElements);
+          }
         }
         if (key == "ArrowRight") {
           prevent();
-          arrowMove(selectedElement, 1, 0, setElements);
+          if (selectedElements.length > 1) {
+            setElements(prevState => 
+              prevState.map(element => {
+                const selectedEl = selectedElements.find(sel => sel.id === element.id);
+                if (selectedEl) {
+                  return {
+                    ...element,
+                    x1: element.x1 + 1,
+                    x2: element.x2 + 1
+                  };
+                }
+                return element;
+              })
+            );
+            // Update selectedElements state to reflect new positions
+            setSelectedElements(prevSelected => 
+              prevSelected.map(sel => ({
+                ...sel,
+                x1: sel.x1 + 1,
+                x2: sel.x2 + 1
+              }))
+            );
+          } else {
+            arrowMove(selectedElement, 1, 0, setElements);
+          }
         }
         if (key == "ArrowDown") {
           prevent();
-          arrowMove(selectedElement, 0, 1, setElements);
+          if (selectedElements.length > 1) {
+            setElements(prevState => 
+              prevState.map(element => {
+                const selectedEl = selectedElements.find(sel => sel.id === element.id);
+                if (selectedEl) {
+                  return {
+                    ...element,
+                    y1: element.y1 + 1,
+                    y2: element.y2 + 1
+                  };
+                }
+                return element;
+              })
+            );
+            // Update selectedElements state to reflect new positions
+            setSelectedElements(prevSelected => 
+              prevSelected.map(sel => ({
+                ...sel,
+                y1: sel.y1 + 1,
+                y2: sel.y2 + 1
+              }))
+            );
+          } else {
+            arrowMove(selectedElement, 0, 1, setElements);
+          }
         }
       }
 
@@ -339,11 +594,12 @@ export default function useCanvas() {
     return () => {
       window.removeEventListener("keydown", keyDownFunction);
     };
-  }, [undo, redo, selectedElement]);
+  }, [undo, redo, selectedElement, selectedElements, elements, setElements, setSelectedElement, setSelectedElements]);
 
   useEffect(() => {
     if (selectedTool != "selection") {
       setSelectedElement(null);
+      setSelectedElements([]);
     }
   }, [selectedTool]);
 

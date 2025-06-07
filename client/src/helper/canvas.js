@@ -266,3 +266,40 @@ export function cornerCursor(corner) {
       return "pointer";
   }
 }
+
+export function drawMultiSelection(selectedElements, context, scale) {
+  if (selectedElements.length <= 1) return;
+
+  const lineWidth = 1 / scale;
+  
+  selectedElements.forEach((element) => {
+    const { x1, y1, x2, y2 } = element;
+    
+    // Draw selection border
+    context.lineWidth = lineWidth;
+    context.strokeStyle = "#3b82f6"; // Blue color for multi-selection
+    context.setLineDash([4 / scale, 4 / scale]); // Dashed line
+    
+    context.beginPath();
+    
+    if (element.tool === "line" || element.tool === "arrow") {
+      // For lines and arrows, draw a simple line highlight
+      context.moveTo(x1, y1);
+      context.lineTo(x2, y2);
+    } else {
+      // For shapes, draw a rectangle around them
+      const minX = Math.min(x1, x2);
+      const maxX = Math.max(x1, x2);
+      const minY = Math.min(y1, y2);
+      const maxY = Math.max(y1, y2);
+      
+      context.rect(minX, minY, maxX - minX, maxY - minY);
+    }
+    
+    context.stroke();
+    context.closePath();
+  });
+  
+  // Reset line dash
+  context.setLineDash([]);
+}

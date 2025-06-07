@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import {
   deleteElement,
   duplicateElement,
+  deleteMultipleElements,
+  duplicateMultipleElements,
+  updateMultipleElements,
   minmax,
   moveElementLayer,
   updateElement,
@@ -10,8 +13,8 @@ import { useAppContext } from "../provider/AppStates";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
 
-export default function Style({ selectedElement }) {
-  const { elements, setElements, setSelectedElement, setStyle } =
+export default function Style({ selectedElement, selectedElements = [] }) {
+  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle } =
     useAppContext();
   const [elementStyle, setElementStyle] = useState({
     fill: selectedElement?.fill,
@@ -36,9 +39,23 @@ export default function Style({ selectedElement }) {
     setStyle((prevState) => ({ ...prevState, ...styleObject }));
   };
 
-  if (!selectedElement) return;
+  const isMultiSelection = selectedElements.length > 1;
+  const hasSelection = selectedElement || isMultiSelection;
+
+  if (!hasSelection) return;
+
   return (
     <section className="styleOptions">
+      {isMultiSelection && (
+        <div className="group multiSelection">
+          <p>Multi-Selection ({selectedElements.length} elements)</p>
+          <div className="innerGroup">
+            <span style={{ fontSize: '12px', color: '#666' }}>
+              Changes will apply to all selected elements
+            </span>
+          </div>
+        </div>
+      )}
       <div className="group strokeColor">
         <p>Stroke</p>
         <div className="innerGroup">
@@ -54,14 +71,21 @@ export default function Style({ selectedElement }) {
               }
               onClick={() => {
                 setStylesStates({ strokeColor: color });
-                updateElement(
-                  selectedElement.id,
-                  {
-                    strokeColor: color,
-                  },
-                  setElements,
-                  elements
-                );
+                if (isMultiSelection) {
+                  updateMultipleElements(
+                    selectedElements,
+                    { strokeColor: color },
+                    setElements,
+                    elements
+                  );
+                } else {
+                  updateElement(
+                    selectedElement.id,
+                    { strokeColor: color },
+                    setElements,
+                    elements
+                  );
+                }
               }}
             ></button>
           ))}
@@ -82,14 +106,21 @@ export default function Style({ selectedElement }) {
               key={index}
               onClick={() => {
                 setStylesStates({ fill });
-                updateElement(
-                  selectedElement.id,
-                  {
-                    fill,
-                  },
-                  setElements,
-                  elements
-                );
+                if (isMultiSelection) {
+                  updateMultipleElements(
+                    selectedElements,
+                    { fill },
+                    setElements,
+                    elements
+                  );
+                } else {
+                  updateElement(
+                    selectedElement.id,
+                    { fill },
+                    setElements,
+                    elements
+                  );
+                }
               }}
             ></button>
           ))}
@@ -106,15 +137,23 @@ export default function Style({ selectedElement }) {
             value={elementStyle.strokeWidth}
             step="1"
             onChange={({ target }) => {
-              setStylesStates({ strokeWidth: minmax(+target.value, [0, 20]) });
-              updateElement(
-                selectedElement.id,
-                {
-                  strokeWidth: minmax(+target.value, [0, 20]),
-                },
-                setElements,
-                elements
-              );
+              const strokeWidth = minmax(+target.value, [0, 20]);
+              setStylesStates({ strokeWidth });
+              if (isMultiSelection) {
+                updateMultipleElements(
+                  selectedElements,
+                  { strokeWidth },
+                  setElements,
+                  elements
+                );
+              } else {
+                updateElement(
+                  selectedElement.id,
+                  { strokeWidth },
+                  setElements,
+                  elements
+                );
+              }
             }}
           />
         </div>
@@ -133,14 +172,21 @@ export default function Style({ selectedElement }) {
               key={index}
               onClick={() => {
                 setStylesStates({ strokeStyle: style.slug });
-                updateElement(
-                  selectedElement.id,
-                  {
-                    strokeStyle: style.slug,
-                  },
-                  setElements,
-                  elements
-                );
+                if (isMultiSelection) {
+                  updateMultipleElements(
+                    selectedElements,
+                    { strokeStyle: style.slug },
+                    setElements,
+                    elements
+                  );
+                } else {
+                  updateElement(
+                    selectedElement.id,
+                    { strokeStyle: style.slug },
+                    setElements,
+                    elements
+                  );
+                }
               }}
             >
               <style.icon />
@@ -159,22 +205,28 @@ export default function Style({ selectedElement }) {
             value={elementStyle.opacity}
             step="10"
             onChange={({ target }) => {
-              setStylesStates({
-                opacity: minmax(+target.value, [0, 100]),
-              });
-              updateElement(
-                selectedElement.id,
-                {
-                  opacity: minmax(+target.value, [0, 100]),
-                },
-                setElements,
-                elements
-              );
+              const opacity = minmax(+target.value, [0, 100]);
+              setStylesStates({ opacity });
+              if (isMultiSelection) {
+                updateMultipleElements(
+                  selectedElements,
+                  { opacity },
+                  setElements,
+                  elements
+                );
+              } else {
+                updateElement(
+                  selectedElement.id,
+                  { opacity },
+                  setElements,
+                  elements
+                );
+              }
             }}
           />
         </div>
       </div>
-      {selectedElement?.id && (
+      {selectedElement?.id && !isMultiSelection && (
         <React.Fragment>
           <div className="group layers">
             <p>Layers</p>
@@ -237,13 +289,13 @@ export default function Style({ selectedElement }) {
             <div className="innerGroup">
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   deleteElement(
                     selectedElement,
                     setElements,
                     setSelectedElement
-                  )
-                }
+                  );
+                }}
                 title="Delete"
                 className="itemButton option"
               >
@@ -253,20 +305,58 @@ export default function Style({ selectedElement }) {
                 type="button"
                 className="itemButton option"
                 title="Duplicate ~ Ctrl + d"
-                onClick={() =>
+                onClick={() => {
                   duplicateElement(
                     selectedElement,
                     setElements,
                     setSelectedElement,
                     10
-                  )
-                }
+                  );
+                }}
               >
                 <Duplicate />
               </button>
             </div>
           </div>
         </React.Fragment>
+      )}
+      
+      {isMultiSelection && (
+        <div className="group actions">
+          <p>Actions</p>
+          <div className="innerGroup">
+            <button
+              type="button"
+              onClick={() => {
+                deleteMultipleElements(
+                  selectedElements,
+                  setElements,
+                  setSelectedElement,
+                  setSelectedElements
+                );
+              }}
+              title={`Delete ${selectedElements.length} elements`}
+              className="itemButton option"
+            >
+              <Delete />
+            </button>
+            <button
+              type="button"
+              className="itemButton option"
+              title={`Duplicate ${selectedElements.length} elements ~ Ctrl + d`}
+              onClick={() => {
+                duplicateMultipleElements(
+                  selectedElements,
+                  setElements,
+                  setSelectedElements,
+                  10
+                );
+              }}
+            >
+              <Duplicate />
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );
