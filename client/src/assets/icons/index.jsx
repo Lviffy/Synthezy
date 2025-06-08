@@ -357,13 +357,9 @@ export const Github = () => (
 export const Text = () => (
   <svg
     height={demention}
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth={2}
+    fill="currentColor"
     viewBox="0 0 24 24"
   >
-    <path d="M17 6H3M21 12H9M21 18H9M7 12v6M7 6v6" />
+    <path d="M3 5h18a1 1 0 0 1 0 2H13v12a1 1 0 0 1-2 0V7H3a1 1 0 0 1 0-2z"/>
   </svg>
 );

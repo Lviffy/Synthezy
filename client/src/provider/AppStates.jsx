@@ -352,7 +352,7 @@ export function AppContextProvider({ children }) {
       },      {
         slug: "text",
         icon: Text,
-        title: "Add Text - Click to Type",
+        title: "Add Text • Click anywhere to start typing • Press T for quick access • Supports multi-line text",
         toolAction,
       },
       {
