@@ -77,21 +77,21 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
         left: position.x,
         top: position.y,
         zIndex: 10000,
-        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-        border: "2px solid #6366f1",
-        borderRadius: "16px",
-        boxShadow: "0 20px 40px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1)",
+        background: "rgba(255, 255, 255, 0.98)",
+        border: "1px solid rgba(0, 0, 0, 0.12)",
+        borderRadius: "12px",
+        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04)",
         minWidth: "320px",
         maxWidth: "450px",
         padding: "20px",
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backdropFilter: "blur(8px)",
+        backdropFilter: "blur(20px)",
         animation: "textInputFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >      <div style={{
         fontSize: "14px",
         fontWeight: "700",
-        color: "#6366f1",
+        color: "#2d3748",
         marginBottom: "12px",
         display: "flex",
         alignItems: "center",
@@ -100,7 +100,7 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
       }}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 5h18a1 1 0 0 1 0 2H13v12a1 1 0 0 1-2 0V7H3a1 1 0 0 1 0-2z"/>
         </svg>
-        ✨ Add Text
+        Add Text
       </div>      <textarea
         ref={inputRef}
         value={text}
@@ -112,25 +112,25 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
           padding: "14px 18px",
           fontSize: "15px",
           fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+          background: "rgba(248, 250, 252, 0.6)",
           color: "#1e293b",
-          border: "2px solid #e2e8f0",
-          borderRadius: "10px",
+          border: "1px solid rgba(0, 0, 0, 0.08)",
+          borderRadius: "8px",
           outline: "none",
           resize: "vertical",
           boxSizing: "border-box",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
           lineHeight: "1.6",
           boxShadow: "inset 0 1px 3px rgba(0, 0, 0, 0.05)"
         }}        onFocus={(e) => {
-          e.target.style.borderColor = "#6366f1";
-          e.target.style.background = "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)";
-          e.target.style.boxShadow = "0 0 0 4px rgba(99, 102, 241, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05)";
+          e.target.style.borderColor = "rgba(0, 0, 0, 0.2)";
+          e.target.style.background = "rgba(255, 255, 255, 0.95)";
+          e.target.style.boxShadow = "0 0 0 3px rgba(0, 0, 0, 0.06), inset 0 1px 3px rgba(0, 0, 0, 0.05)";
           e.target.style.transform = "translateY(-1px)";
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = "#e2e8f0";
-          e.target.style.background = "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)";
+          e.target.style.borderColor = "rgba(0, 0, 0, 0.08)";
+          e.target.style.background = "rgba(248, 250, 252, 0.6)";
           e.target.style.boxShadow = "inset 0 1px 3px rgba(0, 0, 0, 0.05)";
           e.target.style.transform = "translateY(0)";
         }}
@@ -141,41 +141,40 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center"
-      }}>
-        <div style={{
+      }}>        <div style={{
           fontSize: "12px", 
           color: "#64748b",
           display: "flex",
           alignItems: "center",
           gap: "8px"
         }}>          <kbd style={{
-            background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
-            border: "1px solid #cbd5e1", 
-            borderRadius: "6px",
+            background: "rgba(241, 245, 249, 0.8)",
+            border: "1px solid rgba(0, 0, 0, 0.08)", 
+            borderRadius: "4px",
             padding: "3px 8px",
             fontSize: "11px",
-            fontWeight: "700",
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)"
+            fontWeight: "600",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
           }}>Enter</kbd>
           <span>to add text</span>
           <kbd style={{
-            background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
-            border: "1px solid #cbd5e1", 
-            borderRadius: "6px",
+            background: "rgba(241, 245, 249, 0.8)",
+            border: "1px solid rgba(0, 0, 0, 0.08)", 
+            borderRadius: "4px",
             padding: "3px 8px",
             fontSize: "11px",
-            fontWeight: "700",
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)"
+            fontWeight: "600",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
           }}>Esc</kbd>
           <span>to cancel</span>
         </div>        <div style={{
           fontSize: "12px",
           color: "#64748b",
           fontWeight: "600",
-          background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
+          background: "rgba(241, 245, 249, 0.8)",
           padding: "4px 8px",
-          borderRadius: "6px",
-          border: "1px solid #cbd5e1"
+          borderRadius: "4px",
+          border: "1px solid rgba(0, 0, 0, 0.08)"
         }}>
           {text.length} characters
         </div>

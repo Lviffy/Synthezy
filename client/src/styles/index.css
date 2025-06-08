@@ -78,14 +78,23 @@ main.ui footer > div {
 section {
   pointer-events: all;
   width: fit-content;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
 
-  padding: 4px;
-  border: 1px solid var(--secondary-background);
-  border-radius: 8px;
-  background: var(--background-50);
-  backdrop-filter: blur(2px);
-
-  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+section:hover {
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.08),
+    0 3px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 button:active {
@@ -94,48 +103,137 @@ button:active {
 
 section.toolbar {
   display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+section.toolbar:hover {
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 section.toolbar > div {
-  --gap: 5px;
+  --gap: 6px;
   display: flex;
   gap: var(--gap);
+  align-items: center;
+  padding: 2px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.5);
+  transition: all 0.2s ease;
+}
+
+section.toolbar > div:hover {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 section.toolbar > div:not(:last-child)::after {
   content: "";
   position: relative;
-  top: 0;
-  left: 0;
-  background: #c0c0c0;
+  background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.15) 50%, transparent 80%);
   width: 1px;
-  height: 60%;
-  border-radius: 50%;
+  height: 24px;
+  border-radius: 0.5px;
   margin: auto;
-  margin-right: var(--gap);
+  margin-left: 8px;
+  margin-right: 4px;
 }
 
 section.toolbar .toolbutton {
   display: grid;
   place-content: center;
   color: var(--primary-color);
-
-  width: 30px;
-  height: 30px;
-
-  background: none;
-  border: none;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
+
+section.toolbar .toolbutton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.03);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
 section.toolbar .toolbutton:hover {
-  background: rgba(224, 223, 255, 0.5);
+  background: rgba(245, 245, 245, 0.95);
+  border-color: rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.04);
+  color: #2d3748;
+}
+
+section.toolbar .toolbutton:hover::before {
+  opacity: 1;
+}
+
+section.toolbar .toolbutton:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 section.toolbar .toolbutton.selected,
 section.toolbar .toolbutton.lock[data-lock="true"] {
-  color: #030064;
-  background: #e0dfffd5;
+  color: #ffffff;
+  background: #2d3748;
+  border-color: #4a5568;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+section.toolbar .toolbutton.selected:hover,
+section.toolbar .toolbutton.lock[data-lock="true"]:hover {
+  background: #1a202c;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus styles for accessibility */
+section.toolbar .toolbutton:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
+/* Tool icon styling */
+section.toolbar .toolbutton svg {
+  transition: transform 0.2s ease;
+}
+
+section.toolbar .toolbutton:hover svg {
+  transform: scale(1.1);
+}
+
+section.toolbar .toolbutton.selected svg,
+section.toolbar .toolbutton.lock[data-lock="true"] svg {
+  transform: scale(1.05);
 }
 
 section.zoomOptions {
@@ -543,7 +641,7 @@ section.credits {
   0% {
     opacity: 0;
     transform: scale(0.95) translateY(-10px);
-    box-shadow: 0 0 0 rgba(99, 102, 241, 0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
   50% {
     opacity: 1;
@@ -552,19 +650,195 @@ section.credits {
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
-    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
   }
 }
 
 /* Text input focus enhancement */
 @keyframes textInputPulse {
   0% {
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.05);
   }
   100% {
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Toolbar enhancements */
+.tool-group {
+  position: relative;
+}
+
+.tool-indicator {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: #4a5568;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  animation: toolIndicatorPulse 2s ease-in-out infinite;
+}
+
+@keyframes toolIndicatorPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(-50%) scaleX(1.1);
+  }
+}
+
+.lock-indicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #e53e3e;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  color: white;
+  font-size: 10px;
+  box-shadow: 
+    0 4px 12px rgba(229, 62, 62, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: lockBounce 0.6s ease-out;
+}
+
+@keyframes lockBounce {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Minimal tool activation animation */
+@keyframes toolActivate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Enhanced tooltips for toolbar */
+.toolbutton {
+  position: relative;
+}
+
+.toolbutton::after {
+  content: attr(title);
+  position: absolute;
+  top: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 41, 59, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 200px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+}
+
+.toolbutton::before {
+  content: '';
+  position: absolute;
+  top: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: rgba(30, 41, 59, 0.95);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 1001;
+}
+
+.toolbutton:hover::after,
+.toolbutton:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(4px);
+}
+
+.toolbutton:hover::before,
+.toolbutton:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Keyboard navigation highlight */
+.toolbutton:focus-visible {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(74, 85, 104, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Improved visual feedback for tool groups */
+.tool-group:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+}
+
+/* Responsive toolbar adjustments */
+@media (max-width: 768px) {
+  section.toolbar {
+    flex-wrap: wrap;
+    max-width: 280px;
+  }
+  
+  section.toolbar .toolbutton {
+    width: 32px;
+    height: 32px;
+  }
+  
+  section.toolbar > div {
+    --gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  section.toolbar {
+    padding: 6px;
+    gap: 6px;
+  }
+  
+  section.toolbar .toolbutton {
+    width: 28px;
+    height: 28px;
   }
 }
