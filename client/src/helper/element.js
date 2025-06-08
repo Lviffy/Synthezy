@@ -221,6 +221,7 @@ export function minmax(value, interval) {
 }
 
 export function getElementById(id, elements) {
+  if (!elements || !Array.isArray(elements)) return null;
   return elements.find((element) => element.id == id);
 }
 

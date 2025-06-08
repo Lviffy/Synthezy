@@ -21,8 +21,11 @@ const AppContext = createContext();
 
 const isElementsInLocal = () => {
   try {
-    JSON.parse(localStorage.getItem("elements")).forEach(() => {});
-    return JSON.parse(localStorage.getItem("elements"));
+    const stored = localStorage.getItem("elements");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
   } catch (err) {
     return [];
   }

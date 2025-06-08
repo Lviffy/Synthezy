@@ -17,7 +17,7 @@ export default function Ui() {
         <ToolBar />
         <Collaboration />
       </header>
-      {(!["selection", "hand"].includes(selectedTool) || selectedElement || selectedElements.length > 0) && (
+      {(!["selection", "hand"].includes(selectedTool) || selectedElement || (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0)) && (
         <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />
       )}
 

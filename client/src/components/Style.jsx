@@ -39,7 +39,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
     setStyle((prevState) => ({ ...prevState, ...styleObject }));
   };
 
-  const isMultiSelection = selectedElements.length > 1;
+  const isMultiSelection = selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1;
   const hasSelection = selectedElement || isMultiSelection;
 
   if (!hasSelection) return;
@@ -48,7 +48,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
     <section className="styleOptions">
       {isMultiSelection && (
         <div className="group multiSelection">
-          <p>Multi-Selection ({selectedElements.length} elements)</p>
+          <p>Multi-Selection ({selectedElements && Array.isArray(selectedElements) ? selectedElements.length : 0} elements)</p>
           <div className="innerGroup">
             <span style={{ fontSize: '12px', color: '#666' }}>
               Changes will apply to all selected elements
@@ -335,7 +335,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                   setSelectedElements
                 );
               }}
-              title={`Delete ${selectedElements.length} elements`}
+              title={`Delete ${selectedElements && Array.isArray(selectedElements) ? selectedElements.length : 0} elements`}
               className="itemButton option"
             >
               <Delete />
@@ -343,7 +343,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
             <button
               type="button"
               className="itemButton option"
-              title={`Duplicate ${selectedElements.length} elements ~ Ctrl + d`}
+              title={`Duplicate ${selectedElements && Array.isArray(selectedElements) ? selectedElements.length : 0} elements ~ Ctrl + d`}
               onClick={() => {
                 duplicateMultipleElements(
                   selectedElements,

@@ -56,8 +56,8 @@ export default function useCanvas() {  const {
     textInputMode,
     setTextInputMode,
   } = useAppContext();
-
   const canvasRef = useRef(null);
+  const lastUpdateTime = useRef(0);
   const keys = useKeys();
   const dimension = useDimension();
   const [isInElement, setIsInElement] = useState(false);
@@ -116,10 +116,10 @@ export default function useCanvas() {  const {
           duplicateElement(element, setElements, setSelectedElement, 0, {
             offsetX,
             offsetY,
-          });
-        } else {
+          });        } else {
           // Check if element is already in selection
-          const isElementSelected = selectedElements.some(sel => sel.id === element.id);
+          const isElementSelected = selectedElements && Array.isArray(selectedElements) ? 
+            selectedElements.some(sel => sel.id === element.id) : false;
           
           if (event.shiftKey) {
             // Toggle element in selection
@@ -128,14 +128,15 @@ export default function useCanvas() {  const {
               setSelectedElements(newSelection);
               setSelectedElement(newSelection.length > 0 ? newSelection[0] : null);
             } else {
-              const newSelection = [...selectedElements, element];
+              const currentSelection = selectedElements && Array.isArray(selectedElements) ? selectedElements : [];
+              const newSelection = [...currentSelection, element];
               setSelectedElements(newSelection);
               setSelectedElement(element);
             }
             setAction("none"); // Don't start moving when shift-selecting
           } else {
             // If element is already part of multi-selection, move all selected elements
-            if (isElementSelected && selectedElements.length > 1) {
+            if (isElementSelected && selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
               // Store initial positions of all selected elements for grouped movement
               setInitialSelectedElements(selectedElements.map(el => {
                 const currentEl = getElementById(el.id, elements);
@@ -230,10 +231,16 @@ export default function useCanvas() {  const {
       );
       setElements((prevState) => [...prevState, element]);
     }
-  };
-
-  const handleMouseMove = (event) => {
-    const { clientX, clientY } = mousePosition(event);
+  };  const handleMouseMove = (event) => {
+    try {
+      // Throttle mouse move updates during heavy dragging to prevent crashes
+      const now = performance.now();
+      if (action === "move" && now - lastUpdateTime.current < 16) { // ~60fps
+        return;
+      }
+      lastUpdateTime.current = now;
+      
+      const { clientX, clientY } = mousePosition(event);
 
     if (selectedElement) {
       setInCorner(
@@ -281,15 +288,22 @@ export default function useCanvas() {  const {
         ...prev,
         x2: clientX,
         y2: clientY
-      }));    } else if (action == "move") {      if (selectedElements.length > 1 && initialSelectedElements.length > 0) {
+      }));    } else if (action == "move") {      if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1 && initialSelectedElements && Array.isArray(initialSelectedElements) && initialSelectedElements.length > 0) {
         // Multi-element movement: calculate delta from initial mouse position
         const deltaX = clientX - mouseAction.x;
         const deltaY = clientY - mouseAction.y;
 
         // Batch update all selected elements at once to prevent race conditions
-        setElements((prevState) => 
-          prevState.map((element) => {
-            const initialElement = initialSelectedElements.find(init => init.id === element.id);
+        setElements((prevState) => {
+          // Additional safety check to prevent crashes during heavy dragging
+          if (!prevState || !Array.isArray(prevState)) {
+            return prevState;
+          }
+          
+          return prevState.map((element) => {
+            if (!element || !element.id) return element;
+            
+            const initialElement = initialSelectedElements.find(init => init && init.id === element.id);
             if (initialElement) {
               const updatedElement = {
                 ...element,
@@ -300,7 +314,7 @@ export default function useCanvas() {  const {
               };
               
               // For draw tool elements, also move all points in the drawing path
-              if (element.tool === "draw" && initialElement.points && initialElement.points.length > 0) {
+              if (element.tool === "draw" && initialElement.points && Array.isArray(initialElement.points) && initialElement.points.length > 0) {
                 updatedElement.points = initialElement.points.map(point => ({
                   x: point.x + deltaX,
                   y: point.y + deltaY
@@ -310,8 +324,8 @@ export default function useCanvas() {  const {
               return updatedElement;
             }
             return element;
-          })
-        );      } else {
+          });
+        });} else {
         // Single element movement
         const { offsetX, offsetY } = selectedElement;
         const currentX = clientX - offsetX;
@@ -351,10 +365,17 @@ export default function useCanvas() {  const {
       updateElement(
         s_element.id,
         resizeValue(resizeCorner, resizeType, clientX, clientY, padding, s_element, mouseAction, resizeOldDementions),
-        setElements,
-        elements,
+        setElements,        elements,
         true
       );
+    }
+    } catch (error) {
+      console.error('Error in handleMouseMove:', error);
+      // Gracefully handle the error by resetting action if needed
+      if (action === "move") {
+        setAction("none");
+        lockUI(false);
+      }
     }
   };
 
@@ -362,13 +383,12 @@ export default function useCanvas() {  const {
     const currentAction = action; // Store current action before resetting
     
     // Handle marquee selection before resetting action
-    if (currentAction == "selecting") {
-      // Finalize marquee selection
+    if (currentAction == "selecting") {      // Finalize marquee selection
       if (selectionBounds) {
         const selectedInBounds = getElementsInSelectionBounds(elements, selectionBounds);
         if (event.shiftKey) {
           // Add to existing selection
-          const newSelection = [...selectedElements];
+          const newSelection = [...(selectedElements || [])];
           selectedInBounds.forEach(element => {
             if (!newSelection.some(sel => sel.id === element.id)) {
               newSelection.push(element);
@@ -393,7 +413,7 @@ export default function useCanvas() {  const {
     if (currentAction == "move") {
       setInitialSelectedElements([]);
       // Update selectedElements to reflect final positions after group movement
-      if (selectedElements.length > 1) {
+      if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
         const updatedElements = selectedElements.map(sel => {
           const currentElement = getElementById(sel.id, elements);
           return currentElement || sel;
@@ -488,20 +508,29 @@ export default function useCanvas() {  const {
     context.translate(
       translate.x * scale - scaleOffsetX,
       translate.y * scale - scaleOffsetY
-    );
-    context.scale(scale, scale);
-
-    let focusedElement = null;
-    elements.forEach((element) => {
-      draw(element, context);
-      if (element.id == selectedElement?.id) focusedElement = element;
-    });
-
-    const pd = minmax(10 / scale, [0.5, 50]);
-    
-    // Draw multi-selection indicators for multiple selected elements
-    if (selectedElements.length > 1) {
-      drawMultiSelection(selectedElements, context, scale);
+    );    context.scale(scale, scale);    let focusedElement = null;
+    if (elements && Array.isArray(elements) && elements.length > 0) {
+      // Additional safety check to prevent race conditions during heavy dragging
+      const safeElements = elements.filter(element => element && element.id);
+      safeElements.forEach((element) => {
+        try {
+          draw(element, context);
+          if (element.id == selectedElement?.id) focusedElement = element;
+        } catch (error) {
+          console.warn('Error drawing element:', element, error);
+        }
+      });
+    }    const pd = minmax(10 / scale, [0.5, 50]);
+      // Draw multi-selection indicators for multiple selected elements
+    if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
+      try {
+        const safeSelectedElements = selectedElements.filter(el => el && el.id);
+        if (safeSelectedElements.length > 1) {
+          drawMultiSelection(safeSelectedElements, context, scale);
+        }
+      } catch (error) {
+        console.warn('Error drawing multi-selection:', selectedElements, error);
+      }
     }
     
     // Draw focus indicators for the primary selected element
@@ -528,10 +557,9 @@ export default function useCanvas() {  const {
           return;
         }
       }
-      
-      // Handle delete for multi-selection
+        // Handle delete for multi-selection
       if (key === "Backspace" || key === "Delete") {
-        if (selectedElements.length > 1) {
+        if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
           prevent();
           deleteMultipleElements(selectedElements, setElements, setSelectedElement, setSelectedElements);
           return;
@@ -542,10 +570,9 @@ export default function useCanvas() {  const {
         }
       }
       
-      if (selectedElement) {
-        if (ctrlKey && key.toLowerCase() == "d") {
+      if (selectedElement) {        if (ctrlKey && key.toLowerCase() == "d") {
           prevent();
-          if (selectedElements.length > 1) {
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             duplicateMultipleElements(selectedElements, setElements, setSelectedElements, 10);
           } else {
             duplicateElement(
@@ -557,7 +584,7 @@ export default function useCanvas() {  const {
           }
         }        if (key == "ArrowLeft") {
           prevent();
-          if (selectedElements.length > 1) {
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
@@ -575,10 +602,9 @@ export default function useCanvas() {  const {
           } else {
             arrowMove(selectedElement, -1, 0, setElements);
           }
-        }
-        if (key == "ArrowUp") {
+        }        if (key == "ArrowUp") {
           prevent();
-          if (selectedElements.length > 1) {
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
@@ -596,10 +622,9 @@ export default function useCanvas() {  const {
           } else {
             arrowMove(selectedElement, 0, -1, setElements);
           }
-        }
-        if (key == "ArrowRight") {
+        }        if (key == "ArrowRight") {
           prevent();
-          if (selectedElements.length > 1) {
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
@@ -617,10 +642,9 @@ export default function useCanvas() {  const {
           } else {
             arrowMove(selectedElement, 1, 0, setElements);
           }
-        }
-        if (key == "ArrowDown") {
+        }        if (key == "ArrowDown") {
           prevent();
-          if (selectedElements.length > 1) {
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
