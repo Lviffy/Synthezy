@@ -340,10 +340,8 @@ export function draw(element, context) {
     const textWidth = Math.abs(x2 - x1);
     const textHeight = Math.abs(y2 - y1);
     
-    // Skip rendering if dimensions are too small
-    if (textWidth < 10 || textHeight < 10) {
-      return;
-    }
+    // Always render text, even if the box is very small
+    // The text may overflow the box boundaries, which is intentional
     
     // Render actual text with wrapping
     context.save();
@@ -362,9 +360,9 @@ export function draw(element, context) {
       const paragraphs = element.text.split('\n');
       let currentY = y1;
     
-    paragraphs.forEach((paragraph) => {
+    paragraphs.forEach((paragraph, paragraphIndex) => {
       if (paragraph.trim() === '') {
-        // Empty line - just add spacing
+        // Empty line - just add spacing (always render, don't clip)
         currentY += lineHeight;
         return;
       }
@@ -379,21 +377,27 @@ export function draw(element, context) {
         
         if (metrics.width > textWidth && currentLine !== '') {
           // Current line is too wide, render it and start new line
-          if (currentY + lineHeight <= y1 + textHeight) {
-            context.fillText(currentLine, x1, currentY);
-            currentY += lineHeight;
-          } else {
-            // No more room for text, stop rendering
-            break;
-          }
+          // Always render text, even if it goes beyond box height
+          context.fillText(currentLine, x1, currentY);
+          currentY += lineHeight;
           currentLine = words[i];
         } else {
           currentLine = testLine;
         }
+        
+        // Handle long single words that don't fit in width
+        if (currentLine && context.measureText(currentLine).width > textWidth) {
+          // For very long words, render them anyway (they'll overflow horizontally)
+          // This ensures no text is ever hidden due to width constraints
+          context.fillText(currentLine, x1, currentY);
+          currentY += lineHeight;
+          currentLine = '';
+          continue;
+        }
       }
       
-      // Render the last line if there's room
-      if (currentLine && currentY + lineHeight <= y1 + textHeight) {
+      // Render the last line (always render, no height clipping)
+      if (currentLine) {
         context.fillText(currentLine, x1, currentY);
         currentY += lineHeight;
       }

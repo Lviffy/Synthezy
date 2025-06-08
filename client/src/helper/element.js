@@ -386,7 +386,7 @@ export function resizeValue(
   elementOffset
 ) {
   const { x1, x2, y1, y2, tool } = element;
-  // Special handling for text elements - scale font size AND resize box
+  // Special handling for text elements - intelligent text box behavior
   if (tool === "text") {
     // Validate inputs to prevent NaN/Infinity issues
     if (!isFinite(x) || !isFinite(y) || !isFinite(offset.x) || !isFinite(offset.y)) {
@@ -403,62 +403,20 @@ export function resizeValue(
     
     const originalFontSize = elementOffset.fontSize || 16;
     
-    // Calculate distance from the initial click position to current position
-    const deltaX = x - offset.x;
-    const deltaY = y - offset.y;
-    
-    // For corner handles, calculate scale factor based on distance from center
-    let scaleFactor = 1;
-    
-    if (corner === "br" || corner === "tr" || corner === "bl" || corner === "tl") {
-      // Corner resize - use distance from center approach for font scaling
-      const centerX = (elementOffset.x1 + elementOffset.x2) / 2;
-      const centerY = (elementOffset.y1 + elementOffset.y2) / 2;
-      
-      const initialDistance = Math.sqrt(
-        Math.pow(offset.x - centerX, 2) + 
-        Math.pow(offset.y - centerY, 2)
-      );
-      const currentDistance = Math.sqrt(
-        Math.pow(x - centerX, 2) + 
-        Math.pow(y - centerY, 2)
-      );
-      
-      // Ensure we don't divide by zero and clamp scale factor more conservatively
-      if (initialDistance > 5 && isFinite(currentDistance)) {
-        scaleFactor = Math.max(0.3, Math.min(3, currentDistance / initialDistance));      }
-    } else {
-      // Edge resize - use directional scaling for font size with more conservative scaling
-      let primaryDelta = 0;
-      switch (corner) {
-        case "tt":
-        case "bb":
-          primaryDelta = -deltaY; // Inverse for top/bottom
-          break;
-        case "ll":
-        case "rr":
-          primaryDelta = deltaX;
-          break;
-      }
-      // More conservative scale factor for edge handles to prevent extreme changes
-      scaleFactor = Math.max(0.3, Math.min(3, 1 + (primaryDelta * 0.004)));
-    }
-      // Apply constraints and calculate new font size
-    const newFontSize = Math.max(6, Math.min(300, Math.round(originalFontSize * scaleFactor)));
-    
-    // Get the standard resize coordinates for the bounding box
+    // Get the standard resize coordinates for the bounding box first
     const standardResize = getStandardResize(corner, type, x, y, padding, element, offset, elementOffset);
     
-    // Validate the coordinates before returning
+    // Validate the coordinates before proceeding
     const validatedResize = {
       x1: isFinite(standardResize.x1) ? standardResize.x1 : element.x1,
       y1: isFinite(standardResize.y1) ? standardResize.y1 : element.y1,
       x2: isFinite(standardResize.x2) ? standardResize.x2 : element.x2,
       y2: isFinite(standardResize.y2) ? standardResize.y2 : element.y2,
     };
-      // Ensure minimum dimensions (prevent zero or negative width/height)
-    const minWidth = 20; // Increased minimum width for better text visibility
-    const minHeight = 20; // Increased minimum height for better text visibility
+    
+    // Ensure minimum dimensions (prevent zero or negative width/height)
+    const minWidth = 40; // Minimum width for readable text
+    const minHeight = 25; // Minimum height for readable text
     
     if (Math.abs(validatedResize.x2 - validatedResize.x1) < minWidth) {
       if (validatedResize.x2 > validatedResize.x1) {
@@ -475,11 +433,51 @@ export function resizeValue(
         validatedResize.y1 = validatedResize.y2 + minHeight;
       }
     }
+
+    // Intelligent font size scaling based on resize type
+    let newFontSize = originalFontSize;
+    
+    if (corner === "ll" || corner === "rr") {
+      // Left/Right edges: Only change width, keep font size the same
+      // Text will automatically wrap to fit new width
+      newFontSize = originalFontSize;
+      
+    } else if (corner === "tt" || corner === "bb") {
+      // Top/Bottom edges: Scale font size based on height change
+      const originalHeight = Math.abs(elementOffset.y2 - elementOffset.y1);
+      const newHeight = Math.abs(validatedResize.y2 - validatedResize.y1);
+      
+      if (originalHeight > 0) {
+        const heightRatio = newHeight / originalHeight;
+        newFontSize = Math.max(8, Math.min(200, originalFontSize * heightRatio));
+      }
+      
+    } else if (corner === "br" || corner === "tr" || corner === "bl" || corner === "tl") {
+      // Corner resize: Scale font based on area change for proportional scaling
+      const originalWidth = Math.abs(elementOffset.x2 - elementOffset.x1);
+      const originalHeight = Math.abs(elementOffset.y2 - elementOffset.y1);
+      const originalArea = originalWidth * originalHeight;
+      
+      const newWidth = Math.abs(validatedResize.x2 - validatedResize.x1);
+      const newHeight = Math.abs(validatedResize.y2 - validatedResize.y1);
+      const newArea = newWidth * newHeight;
+      
+      if (originalArea > 0) {
+        // Use square root of area ratio for more natural font scaling
+        const areaRatio = Math.sqrt(newArea / originalArea);
+        newFontSize = Math.max(8, Math.min(200, originalFontSize * areaRatio));
+      }
+    }
+    
+    // Round font size and ensure it's finite
+    newFontSize = Math.round(newFontSize);
+    if (!isFinite(newFontSize)) {
+      newFontSize = originalFontSize;
+    }
     
     return {
       ...validatedResize,
-      // Update font size along with box resize
-      fontSize: isFinite(newFontSize) ? newFontSize : originalFontSize,
+      fontSize: newFontSize,
       text: element.text,
       fontFamily: element.fontFamily
     };
