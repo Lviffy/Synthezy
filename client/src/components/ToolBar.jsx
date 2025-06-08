@@ -30,7 +30,7 @@ export default function ToolBar() {
               >                <tool.icon />
                 {/* Tool number indicator */}
                 <span className="tool-number" aria-hidden="true">
-                  {toolCounter === 10 ? '0' : toolCounter}
+                  {toolCounter === 10 ? '0' : toolCounter === 11 ? 'i' : toolCounter}
                 </span>
                 {/* Active indicator for selected tool */}
                 {selectedTool === tool.slug && (
