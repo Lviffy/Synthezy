@@ -1,5 +1,4 @@
 import useCanvas from "../hooks/useCanvas";
-import TextInput from "./TextInput";
 import { useAppContext } from "../provider/AppStates";
 
 export default function Canvas() {

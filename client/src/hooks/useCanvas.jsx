@@ -30,8 +30,7 @@ import {
 } from "../helper/element";
 import useKeys from "./useKeys";
 
-export default function useCanvas() {
-  const {
+export default function useCanvas() {  const {
     selectedTool,
     setSelectedTool,
     action,
@@ -54,6 +53,8 @@ export default function useCanvas() {
     setSelectionBounds,
     undo,
     redo,
+    textInputMode,
+    setTextInputMode,
   } = useAppContext();
 
   const canvasRef = useRef(null);
@@ -62,20 +63,25 @@ export default function useCanvas() {
   const [isInElement, setIsInElement] = useState(false);
   const [inCorner, setInCorner] = useState(false);
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
-  const [cursor, setCursor] = useState("default");
-  const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
+  const [cursor, setCursor] = useState("default");  const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
   const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
-  const [textInputMode, setTextInputMode] = useState(null);
 
   const mousePosition = ({ clientX, clientY }) => {
     clientX = (clientX - translate.x * scale + scaleOffset.x) / scale;
     clientY = (clientY - translate.y * scale + scaleOffset.y) / scale;
     return { clientX, clientY };
   };
-
   const handleMouseDown = (event) => {
     const { clientX, clientY } = mousePosition(event);
+    
+    // Handle text tool click-to-add (PRIORITY - before lockUI)
+    if (selectedTool === "text") {
+      console.log("Text tool clicked at:", clientX, clientY);
+      setTextInputMode({ x: clientX, y: clientY });
+      return;
+    }
+
     lockUI(true);
 
     if (inCorner) {
@@ -155,14 +161,7 @@ export default function useCanvas() {
           setSelectedElements([]);
         }
         setSelectionBounds({ x1: clientX, y1: clientY, x2: clientX, y2: clientY });
-        setAction("selecting");
-      }      return;
-    }
-
-    // Handle text tool click-to-add
-    if (selectedTool === "text") {
-      setTextInputMode({ x: clientX, y: clientY });
-      return;
+        setAction("selecting");      }      return;
     }
 
     // Handle image tool click-to-upload

@@ -3,12 +3,13 @@ import Canvas from "../components/Canvas";
 import Grid from "../components/Grid";
 import SelectionRectangle from "../components/SelectionRectangle";
 import Ui from "../components/Ui";
+import TextInput from "../components/TextInput";
 import { useSearchParams } from "react-router-dom";
 import { useAppContext } from "../provider/AppStates";
 import { socket } from "../api/socket";
 
 export default function WorkSpace() {
-  const { setSession } = useAppContext();
+  const { setSession, textInputMode, setTextInputMode, style } = useAppContext();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {

@@ -49,8 +49,7 @@ export function AppContextProvider({ children }) {
   });
   const [scale, setScale] = useState(1);
   const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
-  const [lockTool, setLockTool] = useState(false);
-  const [style, setStyle] = useState({
+  const [lockTool, setLockTool] = useState(false);  const [style, setStyle] = useState({
     strokeWidth: 3,
     strokeColor: STROKE_COLORS[0],
     strokeStyle: STROKE_STYLES[0].slug,
@@ -58,6 +57,7 @@ export function AppContextProvider({ children }) {
     opacity: 100,
   });
   const [showGrid, setShowGrid] = useState(true);
+  const [textInputMode, setTextInputMode] = useState(null);
 
   useEffect(() => {
     if (session == null) {
@@ -193,10 +193,11 @@ export function AppContextProvider({ children }) {
         setSelectionBounds,
         undo,
         redo,
-        session,
-        setSession,
+        session,        setSession,
         showGrid,
         setShowGrid,
+        textInputMode,
+        setTextInputMode,
       }}
     >
       {children}
