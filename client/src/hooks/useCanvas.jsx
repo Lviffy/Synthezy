@@ -494,11 +494,18 @@ export default function useCanvas() {  const {
       );
       updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
     }
-  };
-
-  const handleWheel = (event) => {
+  };  const handleWheel = (event) => {
     if (event.ctrlKey) {
-      onZoom(event.deltaY * -0.01);
+      event.preventDefault();
+      // Use a more refined zoom calculation for better control
+      const zoomFactor = -event.deltaY * 0.001;
+      
+      // Get mouse position relative to the canvas
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      
+      onZoom(zoomFactor, mouseX, mouseY);
       return;
     }
 
@@ -508,15 +515,13 @@ export default function useCanvas() {  const {
       y: prevState.y - event.deltaY,
     }));
   };
-
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
 
+    // Use center-based positioning for scale offset calculation
     const zoomPositionX = 2;
     const zoomPositionY = 2;
-    // const zoomPositionX = scaleMouse ? canvas.width / scaleMouse.x : 2;
-    // const zoomPositionY = scaleMouse ? canvas.height / scaleMouse.y : 2;
 
     const scaledWidth = canvas.width * scale;
     const scaledHeight = canvas.height * scale;
@@ -688,9 +693,7 @@ export default function useCanvas() {  const {
             arrowMove(selectedElement, 0, 1, setElements);
           }
         }
-      }
-
-      if (ctrlKey || metaKey) {
+      }      if (ctrlKey || metaKey) {
         if (
           key.toLowerCase() == "y" ||
           (key.toLowerCase() == "z" && shiftKey)
@@ -706,6 +709,18 @@ export default function useCanvas() {  const {
         } else if (key.toLowerCase() == "o") {
           prevent();
           uploadElements(setElements);
+        } else if (key === "=" || key === "+") {
+          // Ctrl++ or Ctrl+= for zoom in
+          prevent();
+          onZoom(0.1);
+        } else if (key === "-") {
+          // Ctrl+- for zoom out
+          prevent();
+          onZoom(-0.1);
+        } else if (key === "0") {
+          // Ctrl+0 for reset zoom
+          prevent();
+          onZoom("default");
         }
       }
     };
@@ -750,19 +765,18 @@ export default function useCanvas() {  const {
       document.documentElement.style.setProperty("--canvas-cursor", "default");
     }
   }, [keys, selectedTool, action, isInElement, inCorner]);
-
   useEffect(() => {
-    const fakeWheel = (event) => {
+    const preventBrowserZoom = (event) => {
       if (event.ctrlKey) {
         event.preventDefault();
       }
     };
-    window.addEventListener("wheel", fakeWheel, {
+    window.addEventListener("wheel", preventBrowserZoom, {
       passive: false,
     });
 
     return () => {
-      window.removeEventListener("wheel", fakeWheel);
+      window.removeEventListener("wheel", preventBrowserZoom);
     };
   }, []);
   return {

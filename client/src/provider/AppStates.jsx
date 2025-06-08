@@ -70,14 +70,35 @@ export function AppContextProvider({ children }) {
     if (!getElementById(selectedElement?.id, elements)) {
       setSelectedElement(null);
     }
-  }, [elements, session, selectedElement]);
-
-  const onZoom = (delta) => {
+  }, [elements, session, selectedElement]);  const onZoom = (delta, mouseX = null, mouseY = null) => {
     if (delta == "default") {
       setScale(1);
+      setTranslate({ x: 0, y: 0, sx: 0, sy: 0 });
       return;
     }
-    setScale((prevState) => minmax(prevState + delta, [0.1, 20]));
+    
+    const newScale = minmax(scale + delta, [0.1, 20]);
+    
+    // If mouse position is provided, zoom toward the cursor position
+    if (mouseX !== null && mouseY !== null && newScale !== scale) {
+      setTranslate(prevTranslate => {
+        // Convert mouse position to world coordinates before zoom
+        const worldX = (mouseX - prevTranslate.x * scale + scaleOffset.x) / scale;
+        const worldY = (mouseY - prevTranslate.y * scale + scaleOffset.y) / scale;
+        
+        // Calculate new translation to keep the world point under the cursor
+        const newTranslateX = (mouseX - worldX * newScale + scaleOffset.x) / newScale;
+        const newTranslateY = (mouseY - worldY * newScale + scaleOffset.y) / newScale;
+        
+        return {
+          ...prevTranslate,
+          x: newTranslateX,
+          y: newTranslateY,
+        };
+      });
+    }
+    
+    setScale(newScale);
   };
 
   const toolAction = (slug) => {
