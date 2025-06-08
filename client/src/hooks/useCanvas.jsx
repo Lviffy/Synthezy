@@ -291,9 +291,7 @@ export default function useCanvas() {  const {
       }));    } else if (action == "move") {      if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1 && initialSelectedElements && Array.isArray(initialSelectedElements) && initialSelectedElements.length > 0) {
         // Multi-element movement: calculate delta from initial mouse position
         const deltaX = clientX - mouseAction.x;
-        const deltaY = clientY - mouseAction.y;
-
-        // Batch update all selected elements at once to prevent race conditions
+        const deltaY = clientY - mouseAction.y;        // Batch update all selected elements at once to prevent race conditions
         setElements((prevState) => {
           // Additional safety check to prevent crashes during heavy dragging
           if (!prevState || !Array.isArray(prevState)) {
@@ -325,7 +323,34 @@ export default function useCanvas() {  const {
             }
             return element;
           });
-        });} else {
+        });
+
+        // Update selectedElements positions in real-time during drag to clear past position blue marks
+        setSelectedElements(prevSelected => 
+          prevSelected.map(selectedEl => {
+            const initialElement = initialSelectedElements.find(init => init && init.id === selectedEl.id);
+            if (initialElement) {
+              const updatedSelectedElement = {
+                ...selectedEl,
+                x1: initialElement.x1 + deltaX,
+                y1: initialElement.y1 + deltaY,
+                x2: initialElement.x2 + deltaX,
+                y2: initialElement.y2 + deltaY
+              };
+              
+              // For draw tool elements, also move all points in the selected element
+              if (selectedEl.tool === "draw" && initialElement.points && Array.isArray(initialElement.points) && initialElement.points.length > 0) {
+                updatedSelectedElement.points = initialElement.points.map(point => ({
+                  x: point.x + deltaX,
+                  y: point.y + deltaY
+                }));
+              }
+              
+              return updatedSelectedElement;
+            }
+            return selectedEl;
+          })
+        );} else {
         // Single element movement
         const { offsetX, offsetY } = selectedElement;
         const currentX = clientX - offsetX;
