@@ -71,14 +71,16 @@ export default function useCanvas() {  const {
     clientX = (clientX - translate.x * scale + scaleOffset.x) / scale;
     clientY = (clientY - translate.y * scale + scaleOffset.y) / scale;
     return { clientX, clientY };
-  };
-  const handleMouseDown = (event) => {
-    const { clientX, clientY } = mousePosition(event);
-    
-    // Handle text tool click-to-add (PRIORITY - before lockUI)
+  };  const handleMouseDown = (event) => {
+    const { clientX, clientY } = mousePosition(event);    // Handle text tool click-to-add (PRIORITY - before lockUI)
     if (selectedTool === "text") {
-      console.log("Text tool clicked at:", clientX, clientY);
-      setTextInputMode({ x: clientX, y: clientY });
+      // Use direct screen coordinates for fixed positioning
+      setTextInputMode({ 
+        x: event.clientX, 
+        y: event.clientY, 
+        canvasX: clientX, 
+        canvasY: clientY 
+      });
       return;
     }
 

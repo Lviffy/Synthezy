@@ -1,5 +1,7 @@
 import useCanvas from "../hooks/useCanvas";
 import { useAppContext } from "../provider/AppStates";
+import TextInput from "./TextInput";
+import { createPortal } from "react-dom";
 
 export default function Canvas() {
   const {
@@ -12,19 +14,8 @@ export default function Canvas() {
     textInputMode,
     setTextInputMode,
   } = useCanvas();
-  
-  const { style, scale, translate, scaleOffset } = useAppContext();
+    const { style, scale, translate, scaleOffset } = useAppContext();
 
-  // Convert canvas coordinates to screen coordinates for text input positioning
-  const getScreenPosition = (canvasX, canvasY) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return { x: canvasX, y: canvasY };
-    
-    const screenX = (canvasX * scale + translate.x * scale - scaleOffset.x) + rect.left;
-    const screenY = (canvasY * scale + translate.y * scale - scaleOffset.y) + rect.top;
-    
-    return { x: screenX, y: screenY };
-  };
   return (
     <>
       <canvas
@@ -35,14 +26,14 @@ export default function Canvas() {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
-      />
-      {textInputMode && (
+        onWheel={handleWheel}      />      {textInputMode && createPortal(
         <TextInput
-          position={getScreenPosition(textInputMode.x, textInputMode.y)}
+          position={{ x: textInputMode.x, y: textInputMode.y }}
           onComplete={() => setTextInputMode(null)}
           style={style}
-        />
+          canvasPosition={{ x: textInputMode.canvasX, y: textInputMode.canvasY }}
+        />,
+        document.body
       )}
     </>
   );
