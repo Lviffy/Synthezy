@@ -1,55 +1,62 @@
+import rough from 'roughjs';
+
 export const shapes = {
-  arrow: (x1, y1, x2, y2, ctx) => {
-    const headlen = 5;
+  arrow: (x1, y1, x2, y2, roughCanvas, options) => {
+    // Draw the main line
+    roughCanvas.line(x1, y1, x2, y2, options);
+    
+    // Calculate arrow head
+    const headlen = 10;
     const angle = Math.atan2(y2 - y1, x2 - x1);
-
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(
+    
+    // Draw arrow head lines
+    roughCanvas.line(
+      x2,
+      y2,
       x2 - headlen * Math.cos(angle - Math.PI / 7),
-      y2 - headlen * Math.sin(angle - Math.PI / 7)
+      y2 - headlen * Math.sin(angle - Math.PI / 7),
+      options
     );
-
-    ctx.lineTo(
+    
+    roughCanvas.line(
+      x2,
+      y2,
       x2 - headlen * Math.cos(angle + Math.PI / 7),
-      y2 - headlen * Math.sin(angle + Math.PI / 7)
-    );
-
-    ctx.lineTo(x2, y2);
-    ctx.lineTo(
-      x2 - headlen * Math.cos(angle - Math.PI / 7),
-      y2 - headlen * Math.sin(angle - Math.PI / 7)
+      y2 - headlen * Math.sin(angle + Math.PI / 7),
+      options
     );
   },
-  line: (x1, y1, x2, y2, ctx) => {
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+  line: (x1, y1, x2, y2, roughCanvas, options) => {
+    roughCanvas.line(x1, y1, x2, y2, options);
   },
-  rectangle: (x1, y1, x2, y2, ctx) => {
-    ctx.rect(x1, y1, x2 - x1, y2 - y1);
-  },
-  diamond: (x1, y1, x2, y2, ctx) => {
+  rectangle: (x1, y1, x2, y2, roughCanvas, options) => {
     const width = x2 - x1;
     const height = y2 - y1;
-    ctx.moveTo(x1 + width / 2, y1);
-    ctx.lineTo(x2, y1 + height / 2);
-    ctx.lineTo(x1 + width / 2, y2);
-    ctx.lineTo(x1, y1 + height / 2);
+    roughCanvas.rectangle(x1, y1, width, height, options);
   },
-  circle: (x1, y1, x2, y2, ctx) => {
+  diamond: (x1, y1, x2, y2, roughCanvas, options) => {
     const width = x2 - x1;
     const height = y2 - y1;
-    ctx.ellipse(
-      x1 + width / 2,
-      y1 + height / 2,
-      Math.abs(width) / 2,
-      Math.abs(height) / 2,
-      0,
-      0,
-      2 * Math.PI
-    );
+    const centerX = x1 + width / 2;
+    const centerY = y1 + height / 2;
+    
+    // Create diamond path
+    const points = [
+      [centerX, y1],        // top
+      [x2, centerY],        // right
+      [centerX, y2],        // bottom
+      [x1, centerY]         // left
+    ];
+    
+    roughCanvas.polygon(points, options);
+  },
+  circle: (x1, y1, x2, y2, roughCanvas, options) => {
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+    const centerX = x1 + (x2 - x1) / 2;
+    const centerY = y1 + (y2 - y1) / 2;
+    
+    roughCanvas.ellipse(centerX, centerY, width, height, options);
   },
 };
 
@@ -154,6 +161,7 @@ export function drawFocuse(element, context, padding, scale) {
   let { fx, fy, fw, fh } = demention.line;
   let corners = demention.corners;
 
+  // Use traditional canvas for focus elements (selection UI should be crisp)
   context.lineWidth = lineWidth;
   context.strokeStyle = "#211C6A";
   context.fillStyle = "#EEF5FF";
@@ -177,7 +185,6 @@ export function drawFocuse(element, context, padding, scale) {
 }
 
 export function draw(element, context) {
-  context.beginPath();
   const {
     tool,
     x1,
@@ -191,19 +198,43 @@ export function draw(element, context) {
     opacity,
   } = element;
 
-  context.lineWidth = strokeWidth;
-  context.strokeStyle = rgba(strokeColor, opacity);
-  context.fillStyle = rgba(fill, opacity);
+  // Create rough canvas instance
+  const roughCanvas = rough.canvas(context.canvas);
+  
+  // Convert stroke style to rough.js options
+  let roughnessValue = 1;
+  let strokeLineDash = undefined;
+  
+  if (strokeStyle === "dashed") {
+    strokeLineDash = [strokeWidth * 3, strokeWidth * 2];
+  } else if (strokeStyle === "dotted") {
+    strokeLineDash = [strokeWidth, strokeWidth];
+  }
 
-  if (strokeStyle == "dashed")
-    context.setLineDash([strokeWidth * 2, strokeWidth * 2]);
-  if (strokeStyle == "dotted") context.setLineDash([strokeWidth, strokeWidth]);
-  if (strokeStyle == "solid") context.setLineDash([0, 0]);
+  // Prepare rough.js options
+  // Create a consistent numeric seed from element ID to ensure stable sketchy appearance
+  let seed = 1;
+  if (element.id) {
+    // Convert the element ID string to a consistent number
+    for (let i = 0; i < element.id.length; i++) {
+      seed = (seed * 31 + element.id.charCodeAt(i)) % 1000000;
+    }
+  }
+  
+  const options = {
+    stroke: rgba(strokeColor, opacity),
+    strokeWidth: strokeWidth,
+    fill: fill === "transparent" ? undefined : rgba(fill, opacity),
+    fillStyle: 'solid',
+    roughness: roughnessValue,
+    strokeLineDash: strokeLineDash,
+    seed: seed, // Use consistent numeric seed for stable appearance
+  };
 
-  shapes[tool](x1, y1, x2, y2, context);
-  context.fill();
-  context.closePath();
-  if (strokeWidth > 0) context.stroke();
+  // Draw the shape using rough.js (only if the tool is a valid drawing tool)
+  if (shapes[tool]) {
+    shapes[tool](x1, y1, x2, y2, roughCanvas, options);
+  }
 }
 
 function rgba(color, opacity) {
@@ -275,7 +306,7 @@ export function drawMultiSelection(selectedElements, context, scale) {
   selectedElements.forEach((element) => {
     const { x1, y1, x2, y2 } = element;
     
-    // Draw selection border
+    // Draw selection border using traditional canvas for crisp UI
     context.lineWidth = lineWidth;
     context.strokeStyle = "#3b82f6"; // Blue color for multi-selection
     context.setLineDash([4 / scale, 4 / scale]); // Dashed line

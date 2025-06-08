@@ -208,28 +208,28 @@ export default function useCanvas() {
         ...prev,
         x2: clientX,
         y2: clientY
-      }));
-    } else if (action == "move") {
+      }));    } else if (action == "move") {
       if (selectedElements.length > 1 && initialSelectedElements.length > 0) {
         // Multi-element movement: calculate delta from initial mouse position
         const deltaX = clientX - mouseAction.x;
         const deltaY = clientY - mouseAction.y;
 
-        // Move all selected elements by the same delta from their initial positions
-        initialSelectedElements.forEach((initialElement) => {
-          updateElement(
-            initialElement.id,
-            {
-              x1: initialElement.x1 + deltaX,
-              y1: initialElement.y1 + deltaY,
-              x2: initialElement.x2 + deltaX,
-              y2: initialElement.y2 + deltaY
-            },
-            setElements,
-            elements,
-            true
-          );
-        });
+        // Batch update all selected elements at once to prevent race conditions
+        setElements((prevState) => 
+          prevState.map((element) => {
+            const initialElement = initialSelectedElements.find(init => init.id === element.id);
+            if (initialElement) {
+              return {
+                ...element,
+                x1: initialElement.x1 + deltaX,
+                y1: initialElement.y1 + deltaY,
+                x2: initialElement.x2 + deltaX,
+                y2: initialElement.y2 + deltaY
+              };
+            }
+            return element;
+          })
+        );
       } else {
         // Single element movement
         const { offsetX, offsetY } = selectedElement;
@@ -310,9 +310,7 @@ export default function useCanvas() {
     }
     
     setAction("none");
-    lockUI(false);
-    
-    // Clear initial positions after movement
+    lockUI(false);    // Clear initial positions after movement
     if (currentAction == "move") {
       setInitialSelectedElements([]);
       // Update selectedElements to reflect final positions after group movement
