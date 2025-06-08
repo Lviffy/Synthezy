@@ -58,9 +58,23 @@ export function AppContextProvider({ children }) {
     strokeStyle: STROKE_STYLES[0].slug,
     fill: BACKGROUND_COLORS[0],
     opacity: 100,
-  });
-  const [showGrid, setShowGrid] = useState(true);
+  });  const [showGrid, setShowGrid] = useState(true);
   const [textInputMode, setTextInputMode] = useState(null);
+  const [isZooming, setIsZooming] = useState(false);
+  // Zoom configuration
+  const ZOOM_LIMITS = {
+    min: 0.05,
+    max: 50,
+    step: 0.1,
+    fastStep: 0.5
+  };
+
+  // Touch state for pinch-to-zoom
+  const [touchState, setTouchState] = useState({
+    lastDistance: 0,
+    lastScale: 1,
+    initialTouches: null
+  });
 
   useEffect(() => {
     if (session == null) {
@@ -70,35 +84,205 @@ export function AppContextProvider({ children }) {
     if (!getElementById(selectedElement?.id, elements)) {
       setSelectedElement(null);
     }
-  }, [elements, session, selectedElement]);  const onZoom = (delta, mouseX = null, mouseY = null) => {
-    if (delta == "default") {
-      setScale(1);
-      setTranslate({ x: 0, y: 0, sx: 0, sy: 0 });
+  }, [elements, session, selectedElement]);
+
+  // Smooth zoom animation function
+  const animateZoom = (targetScale, targetTranslate) => {
+    if (isZooming) return; // Prevent multiple animations
+    
+    setIsZooming(true);
+    const startScale = scale;
+    const startTranslate = translate;
+    const duration = 200; // ms
+    const startTime = performance.now();
+    
+    const animate = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function (ease-out cubic)
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      const newScale = startScale + (targetScale - startScale) * eased;
+      const newTranslateX = startTranslate.x + (targetTranslate.x - startTranslate.x) * eased;
+      const newTranslateY = startTranslate.y + (targetTranslate.y - startTranslate.y) * eased;
+      
+      setScale(newScale);
+      setTranslate(prev => ({
+        ...prev,
+        x: newTranslateX,
+        y: newTranslateY
+      }));
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setIsZooming(false);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
+
+  // Helper function for touch distance calculation
+  const getTouchDistance = (touch1, touch2) => {
+    return Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) + 
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+  };
+  // Zoom to fit all content within 100% of the canvas viewport
+  const zoomToFitContent = () => {
+    if (elements.length === 0) {
+      onZoom("default");
       return;
     }
     
-    const newScale = minmax(scale + delta, [0.1, 20]);
+    // Calculate bounding box of all elements
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
-    // If mouse position is provided, zoom toward the cursor position
-    if (mouseX !== null && mouseY !== null && newScale !== scale) {
-      setTranslate(prevTranslate => {
-        // Convert mouse position to world coordinates before zoom
-        const worldX = (mouseX - prevTranslate.x * scale + scaleOffset.x) / scale;
-        const worldY = (mouseY - prevTranslate.y * scale + scaleOffset.y) / scale;
-        
-        // Calculate new translation to keep the world point under the cursor
-        const newTranslateX = (mouseX - worldX * newScale + scaleOffset.x) / newScale;
-        const newTranslateY = (mouseY - worldY * newScale + scaleOffset.y) / newScale;
-        
-        return {
-          ...prevTranslate,
-          x: newTranslateX,
-          y: newTranslateY,
-        };
-      });
+    elements.forEach(element => {
+      const { x1, y1, x2, y2 } = element;
+      
+      // Handle draw tool elements with points
+      if (element.tool === "draw" && element.points && element.points.length > 0) {
+        element.points.forEach(point => {
+          minX = Math.min(minX, point.x);
+          minY = Math.min(minY, point.y);
+          maxX = Math.max(maxX, point.x);
+          maxY = Math.max(maxY, point.y);
+        });
+      } else {
+        minX = Math.min(minX, x1, x2);
+        minY = Math.min(minY, y1, y2);
+        maxX = Math.max(maxX, x1, x2);
+        maxY = Math.max(maxY, y1, y2);
+      }
+    });
+    
+    // Add comfortable padding around content (5% of content size or minimum 50px)
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const paddingX = Math.max(contentWidth * 0.05, 50);
+    const paddingY = Math.max(contentHeight * 0.05, 50);
+    
+    const totalContentWidth = contentWidth + paddingX * 2;
+    const totalContentHeight = contentHeight + paddingY * 2;
+    
+    // Get actual canvas dimensions
+    const canvasWidth = window.innerWidth;
+    const canvasHeight = window.innerHeight;
+    
+    // Calculate scale to fit content exactly within 100% of canvas
+    const scaleX = canvasWidth / totalContentWidth;
+    const scaleY = canvasHeight / totalContentHeight;
+    const targetScale = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+    
+    // Calculate translation to center content perfectly in viewport
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
+    const canvasCenterX = canvasWidth / 2;
+    const canvasCenterY = canvasHeight / 2;
+    
+    const targetTranslateX = (canvasCenterX / targetScale) - contentCenterX;
+    const targetTranslateY = (canvasCenterY / targetScale) - contentCenterY;
+    
+    animateZoom(targetScale, { 
+      x: targetTranslateX, 
+      y: targetTranslateY,
+      sx: translate.sx,
+      sy: translate.sy
+    });
+  };
+  const onZoom = (delta, mouseX = null, mouseY = null, options = {}) => {
+    const { isFastZoom = false, animate = false } = options;
+    
+    if (delta === "default") {
+      if (animate) {
+        animateZoom(1, { x: 0, y: 0, sx: 0, sy: 0 });
+      } else {
+        setScale(1);
+        setTranslate({ x: 0, y: 0, sx: 0, sy: 0 });
+      }
+      return;
+    }
+
+    if (delta === "fit") {
+      zoomToFitContent();
+      return;
     }
     
-    setScale(newScale);
+    const zoomStep = isFastZoom ? ZOOM_LIMITS.fastStep : ZOOM_LIMITS.step;
+    const actualDelta = typeof delta === 'number' ? delta : (delta > 0 ? zoomStep : -zoomStep);
+    const targetScale = minmax(scale + actualDelta, [ZOOM_LIMITS.min, ZOOM_LIMITS.max]);
+    
+    // Prevent unnecessary updates if already at limit
+    if (Math.abs(targetScale - scale) < 0.001) return;
+    
+    let targetTranslate = translate;
+    
+    // If mouse position is provided, zoom toward the cursor position
+    if (mouseX !== null && mouseY !== null) {
+      // Convert mouse position to world coordinates before zoom
+      const worldX = (mouseX - translate.x * scale + scaleOffset.x) / scale;
+      const worldY = (mouseY - translate.y * scale + scaleOffset.y) / scale;
+      
+      // Calculate new translation to keep the world point under the cursor
+      const newTranslateX = (mouseX - worldX * targetScale + scaleOffset.x) / targetScale;
+      const newTranslateY = (mouseY - worldY * targetScale + scaleOffset.y) / targetScale;
+
+      targetTranslate = {
+        ...translate,
+        x: newTranslateX,
+        y: newTranslateY,
+      };
+    }
+    
+    if (animate) {
+      animateZoom(targetScale, targetTranslate);
+    } else {
+      setScale(targetScale);
+      setTranslate(targetTranslate);
+    }
+  };
+
+  // Touch handlers for pinch-to-zoom
+  const handleTouchStart = (event) => {
+    if (event.touches.length === 2) {
+      const distance = getTouchDistance(event.touches[0], event.touches[1]);
+      setTouchState({
+        lastDistance: distance,
+        lastScale: scale,
+        initialTouches: {
+          touch1: { x: event.touches[0].clientX, y: event.touches[0].clientY },
+          touch2: { x: event.touches[1].clientX, y: event.touches[1].clientY }
+        }
+      });
+    }
+  };
+
+  const handleTouchMove = (event) => {
+    if (event.touches.length === 2 && touchState.initialTouches) {
+      event.preventDefault();
+      
+      const currentDistance = getTouchDistance(event.touches[0], event.touches[1]);
+      const scaleRatio = currentDistance / touchState.lastDistance;
+      const newScale = minmax(touchState.lastScale * scaleRatio, [ZOOM_LIMITS.min, ZOOM_LIMITS.max]);
+      
+      // Get center point of pinch gesture
+      const centerX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+      const centerY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+      
+      onZoom(newScale - scale, centerX, centerY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchState({
+      lastDistance: 0,
+      lastScale: 1,
+      initialTouches: null
+    });
   };
 
   const toolAction = (slug) => {
@@ -187,7 +371,6 @@ export function AppContextProvider({ children }) {
       });
     }
   }, [session]);
-
   return (
     <AppContext.Provider
       value={{
@@ -203,6 +386,7 @@ export function AppContextProvider({ children }) {
         scale,
         setScale,
         onZoom,
+        zoomToFitContent,
         scaleOffset,
         setScaleOffset,
         lockTool,
@@ -222,6 +406,9 @@ export function AppContextProvider({ children }) {
         setShowGrid,
         textInputMode,
         setTextInputMode,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
       }}
     >
       {children}

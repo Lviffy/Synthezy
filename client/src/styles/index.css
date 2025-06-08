@@ -157,12 +157,26 @@ section.zoomOptions .zoom {
   cursor: pointer;
   font-size: 1.1em;
   font-weight: 900;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+section.zoomOptions .zoom:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+section.zoomOptions .zoom:active {
+  transform: scale(0.95);
 }
 
 section.zoomOptions .zoom.text {
   width: fit-content;
   width: 4em !important;
   font-size: 15px;
+}
+
+section.zoomOptions .zoom.fit {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 section.styleOptions {

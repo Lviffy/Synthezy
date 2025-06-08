@@ -14,7 +14,7 @@ export default function Canvas() {
     textInputMode,
     setTextInputMode,
   } = useCanvas();
-    const { style, scale, translate, scaleOffset } = useAppContext();
+  const { style, scale, translate, scaleOffset, handleTouchStart, handleTouchMove, handleTouchEnd } = useAppContext();
 
   return (
     <>
@@ -26,7 +26,13 @@ export default function Canvas() {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}      />      {textInputMode && createPortal(
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }} // Prevent default touch behaviors
+      />
+      {textInputMode && createPortal(
         <TextInput
           position={{ x: textInputMode.x, y: textInputMode.y }}
           onComplete={() => setTextInputMode(null)}

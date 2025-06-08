@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAppContext } from "../provider/AppStates";
 import useDimension from "./useDimension";
 import { lockUI } from "../helper/ui";
@@ -55,6 +55,9 @@ export default function useCanvas() {  const {
     redo,
     textInputMode,
     setTextInputMode,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   } = useAppContext();
   const canvasRef = useRef(null);
   const lastUpdateTime = useRef(0);
@@ -63,9 +66,34 @@ export default function useCanvas() {  const {
   const [isInElement, setIsInElement] = useState(false);
   const [inCorner, setInCorner] = useState(false);
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
-  const [cursor, setCursor] = useState("default");  const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [cursor, setCursor] = useState("default");
+  const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
+  const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
+  // Debounced zoom handler to prevent excessive updates
+  const debouncedZoom = useMemo(
+    () => {
+      let timeoutId;
+      return (delta, mouseX, mouseY, options = {}) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          // Calculate adaptive zoom step based on current scale
+          let adaptiveDelta = delta;
+          if (typeof delta === 'number') {
+            const currentScale = scale;
+            if (currentScale < 0.1) {
+              adaptiveDelta = delta * 0.5; // Slower zoom when very zoomed out
+            } else if (currentScale > 5) {
+              adaptiveDelta = delta * 2; // Faster zoom when very zoomed in
+            }
+          }
+          onZoom(adaptiveDelta, mouseX, mouseY, options);
+        }, 16); // ~60fps
+      };
+    },
+    [onZoom, scale]
+  );
 
   const mousePosition = ({ clientX, clientY }) => {
     clientX = (clientX - translate.x * scale + scaleOffset.x) / scale;
@@ -494,27 +522,87 @@ export default function useCanvas() {  const {
       );
       updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
     }
-  };  const handleWheel = (event) => {
-    if (event.ctrlKey) {
+  };  // Momentum scrolling state
+  const [momentum, setMomentum] = useState({ x: 0, y: 0 });
+  const momentumRef = useRef({ x: 0, y: 0 });
+  const lastWheelTime = useRef(0);
+
+  // Enhanced wheel handler with momentum and better zoom detection
+  const handleWheel = useCallback((event) => {
+    const now = performance.now();
+    const timeDelta = now - lastWheelTime.current;
+    lastWheelTime.current = now;
+
+    // Detect if this is a zoom gesture (Ctrl+wheel or pinch on trackpad)
+    const isZoomGesture = event.ctrlKey || event.metaKey || 
+                         (Math.abs(event.deltaY) > 0 && event.deltaX === 0 && event.deltaZ === 0);
+    
+    if (isZoomGesture) {
       event.preventDefault();
-      // Use a more refined zoom calculation for better control
-      const zoomFactor = -event.deltaY * 0.001;
+      
+      // More sensitive zoom calculation for precise control
+      let zoomFactor = -event.deltaY * 0.001;
+      
+      // Adjust zoom sensitivity based on deltaMode
+      if (event.deltaMode === 1) { // DOM_DELTA_LINE
+        zoomFactor *= 16;
+      } else if (event.deltaMode === 2) { // DOM_DELTA_PAGE
+        zoomFactor *= 400;
+      }
       
       // Get mouse position relative to the canvas
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;
-      
-      onZoom(zoomFactor, mouseX, mouseY);
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+        
+        // Use debounced zoom for smooth performance
+        debouncedZoom(zoomFactor, mouseX, mouseY);
+      }
       return;
     }
 
+    // Handle panning with momentum
+    const deltaX = event.deltaX * 0.5;
+    const deltaY = event.deltaY * 0.5;
+    
+    // Apply immediate translation
     setTranslate((prevState) => ({
       ...prevState,
-      x: prevState.x - event.deltaX,
-      y: prevState.y - event.deltaY,
+      x: prevState.x - deltaX,
+      y: prevState.y - deltaY,
     }));
-  };
+
+    // Add momentum if wheel events are coming quickly
+    if (timeDelta < 100) {
+      momentumRef.current = {
+        x: momentumRef.current.x * 0.8 + deltaX * 0.2,
+        y: momentumRef.current.y * 0.8 + deltaY * 0.2
+      };
+    } else {
+      momentumRef.current = { x: deltaX, y: deltaY };
+    }
+
+    // Apply momentum decay
+    const applyMomentum = () => {
+      if (Math.abs(momentumRef.current.x) > 0.1 || Math.abs(momentumRef.current.y) > 0.1) {
+        setTranslate((prevState) => ({
+          ...prevState,
+          x: prevState.x - momentumRef.current.x * 0.1,
+          y: prevState.y - momentumRef.current.y * 0.1,
+        }));
+        
+        momentumRef.current.x *= 0.95;
+        momentumRef.current.y *= 0.95;
+        
+        requestAnimationFrame(applyMomentum);
+      }
+    };
+    
+    if (timeDelta > 100) {
+      requestAnimationFrame(applyMomentum);
+    }
+  }, [debouncedZoom]);
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
@@ -708,19 +796,22 @@ export default function useCanvas() {  const {
           saveElements(elements);
         } else if (key.toLowerCase() == "o") {
           prevent();
-          uploadElements(setElements);
-        } else if (key === "=" || key === "+") {
+          uploadElements(setElements);        } else if (key === "=" || key === "+") {
           // Ctrl++ or Ctrl+= for zoom in
           prevent();
-          onZoom(0.1);
+          onZoom(0.1, null, null, { animate: true });
         } else if (key === "-") {
           // Ctrl+- for zoom out
           prevent();
-          onZoom(-0.1);
+          onZoom(-0.1, null, null, { animate: true });
         } else if (key === "0") {
           // Ctrl+0 for reset zoom
           prevent();
-          onZoom("default");
+          onZoom("default", null, null, { animate: true });
+        } else if (key.toLowerCase() === "9") {
+          // Ctrl+9 for zoom to fit content
+          prevent();
+          onZoom("fit");
         }
       }
     };

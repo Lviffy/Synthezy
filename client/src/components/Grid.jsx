@@ -20,14 +20,24 @@ export default function Grid() {
     const ctx = canvas.getContext('2d');
     drawGrid(ctx, canvas.width, canvas.height, scale, translate, scaleOffset);
   }, [showGrid, scale, translate.x, translate.y, scaleOffset.x, scaleOffset.y, dimension]);
-
   const drawGrid = (ctx, width, height, scale, translate, scaleOffset) => {
     ctx.clearRect(0, 0, width, height);
     
-    // Grid configuration
-    const gridSize = 25; // 25 pixels apart
-    const dotRadius = 1.5; // Small circular dots
-    const dotColor = 'rgba(160, 160, 160, 0.6)'; // Light gray with transparency
+    // Adaptive grid size based on zoom level
+    let gridSize = 25;
+    if (scale < 0.25) {
+      gridSize = 100; // Larger grid when zoomed out
+    } else if (scale < 0.5) {
+      gridSize = 50;
+    } else if (scale > 4) {
+      gridSize = 12.5; // Smaller grid when zoomed in
+    } else if (scale > 2) {
+      gridSize = 20;
+    }
+    
+    // Fade out grid when zoomed out too much
+    const opacity = Math.min(0.8, Math.max(0.1, scale * 0.6));
+    const dotColor = `rgba(160, 160, 160, ${opacity})`;
     
     // Calculate the grid offset using the same logic as the main canvas
     const translateX = translate.x * scale - scaleOffset.x;
@@ -35,6 +45,9 @@ export default function Grid() {
     
     // Calculate the scaled grid size
     const scaledGridSize = gridSize * scale;
+    
+    // Skip drawing if grid is too small to be useful
+    if (scaledGridSize < 5) return;
     
     // Calculate the starting position for dots based on translation
     const startX = translateX % scaledGridSize;
@@ -45,7 +58,8 @@ export default function Grid() {
     const dotsY = Math.ceil(height / scaledGridSize) + 2;
     
     // Adjust dot radius based on scale (but with limits for visibility)
-    const adjustedDotRadius = Math.max(0.5, Math.min(3, dotRadius * Math.pow(scale, 0.5)));
+    const baseDotRadius = scale > 1 ? 1.5 : 1.2;
+    const adjustedDotRadius = Math.max(0.5, Math.min(3, baseDotRadius * Math.pow(scale, 0.3)));
     
     // Set dot style
     ctx.fillStyle = dotColor;
