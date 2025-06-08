@@ -3,33 +3,43 @@ import { useAppContext } from "../provider/AppStates";
 export default function ToolBar() {
   const { tools: toolCols, selectedTool, lockTool } = useAppContext();
 
+  // Calculate sequential tool numbers across all groups
+  let toolCounter = 0;
+
   return (
     <section className="toolbar" role="toolbar" aria-label="Drawing tools">
       {toolCols.map((tools, groupIndex) => (
         <div key={groupIndex} className="tool-group" role="group">
-          {tools.map((tool, toolIndex) => (
-            <button
-              key={toolIndex}
-              className={
-                "toolbutton" +
-                ` ${tool.slug}` +
-                (selectedTool === tool.slug ? " selected" : "")
-              }
-              data-lock={lockTool}
-              data-tool={tool.slug}
-              onClick={() => tool.toolAction(tool.slug)}
-              title={tool.title}
-              aria-label={tool.title}
-              aria-pressed={selectedTool === tool.slug}
-              aria-describedby={`tooltip-${tool.slug}`}
-            >
-              <tool.icon />
-              {/* Active indicator for selected tool */}
-              {selectedTool === tool.slug && (
-                <div className="tool-indicator" aria-hidden="true" />
-              )}
-            </button>
-          ))}
+          {tools.map((tool, toolIndex) => {
+            toolCounter++; // Increment for each tool
+            return (
+              <button
+                key={toolIndex}
+                className={
+                  "toolbutton" +
+                  ` ${tool.slug}` +
+                  (selectedTool === tool.slug ? " selected" : "")
+                }
+                data-lock={lockTool}
+                data-tool={tool.slug}
+                onClick={() => tool.toolAction(tool.slug)}
+                title={tool.title}
+                aria-label={tool.title}
+                aria-pressed={selectedTool === tool.slug}
+                aria-describedby={`tooltip-${tool.slug}`}
+              >
+                <tool.icon />
+                {/* Tool number indicator */}
+                <span className="tool-number" aria-hidden="true">
+                  {toolCounter}
+                </span>
+                {/* Active indicator for selected tool */}
+                {selectedTool === tool.slug && (
+                  <div className="tool-indicator" aria-hidden="true" />
+                )}
+              </button>
+            );
+          })}
         </div>
       ))}
       

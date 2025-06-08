@@ -98,7 +98,7 @@ section:hover {
 }
 
 button:active {
-  border: 1px solid rgb(71, 114, 180) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
 }
 
 section.toolbar {
@@ -156,9 +156,9 @@ section.toolbar .toolbutton {
   color: var(--primary-color);
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -169,19 +169,19 @@ section.toolbar .toolbutton::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.02);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
 section.toolbar .toolbutton:hover {
-  background: rgba(245, 245, 245, 0.95);
-  border-color: rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  background: rgba(248, 250, 252, 0.98);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px) scale(1.02);
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.04);
-  color: #2d3748;
+    0 6px 16px rgba(0, 0, 0, 0.06),
+    0 3px 8px rgba(0, 0, 0, 0.03);
+  color: #1a202c;
 }
 
 section.toolbar .toolbutton:hover::before {
@@ -191,8 +191,9 @@ section.toolbar .toolbutton:hover::before {
 section.toolbar .toolbutton:active {
   transform: translateY(0) scale(0.98);
   box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  animation: toolActivate 0.15s ease-out;
 }
 
 section.toolbar .toolbutton.selected,
@@ -236,6 +237,50 @@ section.toolbar .toolbutton.lock[data-lock="true"] svg {
   transform: scale(1.05);
 }
 
+/* Tool number styling */
+.tool-number {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: transparent;
+  color: #4a5568;
+  font-size: 8px;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1;
+  transition: all 0.2s ease;
+  z-index: 10;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Adjust number styling for selected tools */
+section.toolbar .toolbutton.selected .tool-number,
+section.toolbar .toolbutton.lock[data-lock="true"] .tool-number {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Subtle animation on hover */
+section.toolbar .toolbutton:hover .tool-number {
+  transform: scale(1.1);
+  color: #2d3748;
+}
+
+/* Responsive adjustments for tool numbers */
+@media (max-width: 768px) {
+  .tool-number {
+    font-size: 7px;
+    bottom: 1px;
+    right: 1px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tool-number {
+    font-size: 6px;
+  }
+}
+
 section.zoomOptions {
   display: flex;
   gap: 5px;
@@ -251,19 +296,22 @@ section.zoomOptions .zoom {
 
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 1.1em;
-  font-weight: 900;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 section.zoomOptions .zoom:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 section.zoomOptions .zoom:active {
   transform: scale(0.95);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 section.zoomOptions .zoom.text {
@@ -370,8 +418,20 @@ section.undoRedo > button {
 
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+section.undoRedo > button:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+section.undoRedo > button:active {
+  transform: scale(0.95);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 div.menu {
@@ -441,17 +501,30 @@ div.collaboration {
   position: relative;
   padding: 0 20px;
   height: 40px;
-  border-radius: 7px;
-  border: 1px solid #6965db;
-  background: #6965db;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+  background: #4a5568;
   color: #ffffff;
   font-family: secondaryFont;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collaborateButton:hover {
+  background: #2d3748;
+  border-color: #2d3748;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .collaborateButton.active {
-  border: 1px solid #54b435;
-  background: #54b435;
+  border: 1px solid #38a169;
+  background: #38a169;
+}
+
+.collaborateButton.active:hover {
+  background: #2f855a;
+  border-color: #2f855a;
 }
 
 /* .collaborateButton.active::before {
@@ -814,7 +887,98 @@ section.credits {
   border-radius: 12px;
 }
 
-/* Responsive toolbar adjustments */
+/* Enhanced toolbar micro-interactions */
+section.toolbar .toolbutton:not(:disabled) {
+  cursor: pointer;
+}
+
+section.toolbar .toolbutton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+section.toolbar .toolbutton:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Improved section loading state */
+section.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+section.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: inherit;
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Subtle icon hover effects */
+section.toolbar .toolbutton svg {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+section.toolbar .toolbutton:hover svg {
+  transform: scale(1.05);
+}
+
+section.toolbar .toolbutton:active svg {
+  transform: scale(0.95);
+}
+
+/* Focus ring improvements for better accessibility */
+section.toolbar .toolbutton:focus-visible {
+  outline: none;
+  box-shadow: 
+    0 0 0 2px rgba(74, 85, 104, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Enhanced group visual hierarchy */
+section.toolbar > div {
+  position: relative;
+}
+
+section.toolbar > div::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: -1;
+}
+
+section.toolbar > div:hover::before {
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  section.collaborationBox {
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+  }
+}
+
 @media (max-width: 768px) {
   section.toolbar {
     flex-wrap: wrap;
