@@ -27,11 +27,10 @@ export default function ToolBar() {
                 aria-label={tool.title}
                 aria-pressed={selectedTool === tool.slug}
                 aria-describedby={`tooltip-${tool.slug}`}
-              >
-                <tool.icon />
+              >                <tool.icon />
                 {/* Tool number indicator */}
                 <span className="tool-number" aria-hidden="true">
-                  {toolCounter}
+                  {toolCounter === 10 ? '0' : toolCounter}
                 </span>
                 {/* Active indicator for selected tool */}
                 {selectedTool === tool.slug && (

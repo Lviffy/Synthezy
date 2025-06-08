@@ -707,8 +707,7 @@ export default function useCanvas() {  const {
         activeElement.contentEditable === 'true'
       )) {
         return;
-      }
-        // Handle tool number shortcuts (1-9, 0 for tool 10, -, = for tools 11-12)
+      }      // Handle tool number shortcuts (1-9, 0 for tool 10, -, = for tools 11-12)
       if (!ctrlKey && !metaKey && !shiftKey) {
         let toolNumber = null;
         
@@ -717,7 +716,7 @@ export default function useCanvas() {  const {
         if (key >= '1' && key <= '9') {
           toolNumber = parseInt(key);
         } else if (key === '0') {
-          toolNumber = 10;
+          toolNumber = 10; // Key '0' still maps to tool #10 internally
         } else if (key === 'i') {
           toolNumber = 11;
         } else if (key === '=') {
