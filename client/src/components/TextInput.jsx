@@ -4,9 +4,8 @@ import { createElement } from "../helper/element";
 
 export default function TextInput({ position, onComplete, style, canvasPosition }) {
   const [text, setText] = useState("");
-  const [fontSize, setFontSize] = useState(16);
   const inputRef = useRef(null);
-  const { setElements, setSelectedElement, setSelectedTool, lockTool } = useAppContext();  useEffect(() => {
+  const { setElements, setSelectedElement, setSelectedTool, lockTool } = useAppContext();useEffect(() => {
     // Use a timeout to ensure the element is fully rendered before focusing
     const timer = setTimeout(() => {
       if (inputRef.current) {
@@ -17,13 +16,25 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
     return () => clearTimeout(timer);
   }, []);  const handleComplete = () => {
     if (text.trim()) {
-      // Estimate text dimensions using canvas measureText
+      // Use a default font size for initial text creation
+      const fontSize = 16;
+        // Estimate text dimensions using canvas measureText
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       ctx.font = `${fontSize}px system-ui, -apple-system, sans-serif`;
-      const textMetrics = ctx.measureText(text);
-      const textWidth = textMetrics.width;
-      const textHeight = fontSize;
+      
+      // Handle multi-line text properly
+      const lines = text.split('\n');
+      const lineHeight = fontSize * 1.2;
+      let maxWidth = 0;
+      
+      lines.forEach(line => {
+        const lineMetrics = ctx.measureText(line);
+        maxWidth = Math.max(maxWidth, lineMetrics.width);
+      });
+      
+      const textWidth = maxWidth;
+      const textHeight = lines.length * lineHeight;
 
       // Create text element using the canvas coordinates
       const element = createElement(
@@ -76,46 +87,7 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
         padding: "12px",
         fontFamily: "system-ui, -apple-system, sans-serif",
       }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-        <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>
-          Font Size:
-        </label>
-        <input
-          type="number"
-          value={fontSize}
-          onChange={(e) => setFontSize(Math.max(8, Math.min(72, parseInt(e.target.value) || 16)))}
-          style={{
-            width: "50px",
-            padding: "4px 6px",
-            fontSize: "12px",
-            border: "1px solid #d1d5db",
-            borderRadius: "4px",
-            outline: "none"
-          }}
-          min="8"
-          max="72"
-        />
-        <button 
-          onClick={handleComplete}
-          style={{
-            marginLeft: "auto",
-            background: "none",
-            border: "none",
-            fontSize: "16px",
-            color: "#6b7280",
-            cursor: "pointer",
-            padding: "4px",
-            borderRadius: "4px"
-          }}
-          onMouseEnter={(e) => e.target.style.background = "#f3f4f6"}
-          onMouseLeave={(e) => e.target.style.background = "none"}
-          title="Close (Escape)"
-        >
-          ✕
-        </button>
-      </div>
-      <textarea
+    >      <textarea
         ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -136,8 +108,7 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
         }}
         placeholder="Type your text here..."
         autoFocus
-      />
-      <div style={{ 
+      />      <div style={{ 
         marginTop: "8px", 
         fontSize: "11px", 
         color: "#9ca3af",

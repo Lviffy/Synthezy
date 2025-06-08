@@ -236,16 +236,255 @@ export function adjustCoordinates(element) {
   return { id, x1: minX, y1: minY, x2: maxX, y2: maxY };
 }
 
+// Helper function to calculate minimum height needed for text with wrapping
+function calculateMinTextHeight(text, width, fontSize, fontFamily = 'Arial') {
+  if (!text || text.trim() === '') return fontSize * 1.2; // Minimum one line
+  
+  // Create a temporary canvas to measure text
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  
+  const lineHeight = fontSize * 1.2;
+  const lines = text.split('\n');
+  let totalLines = 0;
+  
+  lines.forEach(line => {
+    if (line.trim() === '') {
+      totalLines += 1; // Empty line still takes space
+      return;
+    }
+    
+    // Calculate how many lines this text will wrap to
+    const words = line.split(' ');
+    let currentLine = '';
+    let lineCount = 0;
+    
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > width && currentLine !== '') {
+        lineCount++;
+        currentLine = words[i];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      lineCount++;
+    }
+    
+    totalLines += Math.max(1, lineCount); // At least one line per paragraph
+  });
+  
+  return totalLines * lineHeight;
+}
+
+// Helper function to get standard resize coordinates (non-text elements)
+function getStandardResize(corner, type, x, y, padding, element, offset, elementOffset) {
+  // Validate inputs
+  if (!isFinite(x) || !isFinite(y) || !element || !offset || !elementOffset) {
+    console.warn("Invalid inputs to getStandardResize, returning original coordinates");
+    return {
+      x1: element?.x1 || 0,
+      y1: element?.y1 || 0,
+      x2: element?.x2 || 100,
+      y2: element?.y2 || 100
+    };
+  }
+  
+  const { x1, x2, y1, y2 } = element;
+  
+  const getPadding = (condition) => {
+    return condition ? padding : padding * -1;
+  };
+
+  const getType = (coordinate, originalCoordinate, eleOffset, te = false) => {
+    if (type === "default") return originalCoordinate;
+
+    const def = coordinate - offset.y;
+    if (te) return eleOffset - def;
+    return eleOffset + def;
+  };
+
+  switch (corner) {
+    case "tt":
+      return {
+        x1: getType(y, x1, elementOffset.x1, true),
+        y1: y + getPadding(y < y2),
+        x2: getType(y, x2, elementOffset.x2),
+        y2: getType(y, y2, elementOffset.y2),
+      };
+    case "bb":
+      return { 
+        x1, 
+        y1, 
+        x2, 
+        y2: y + getPadding(y < y1) 
+      };
+    case "rr":
+      return { 
+        x1, 
+        y1, 
+        x2: x + getPadding(x < x1), 
+        y2 
+      };
+    case "ll":
+      return { 
+        x1: x + getPadding(x < x2), 
+        y1, 
+        x2, 
+        y2 
+      };
+    case "tl":
+      return { 
+        x1: x + getPadding(x < x2), 
+        y1: y + getPadding(y < y2), 
+        x2, 
+        y2 
+      };
+    case "tr":
+      return { 
+        x1, 
+        y1: y + getPadding(y < y2), 
+        x2: x + getPadding(x < x1), 
+        y2 
+      };
+    case "bl":
+      return { 
+        x1: x + getPadding(x < x2), 
+        y1, 
+        x2, 
+        y2: y + getPadding(y < y1) 
+      };
+    case "br":
+      return { 
+        x1, 
+        y1, 
+        x2: x + getPadding(x < x1), 
+        y2: y + getPadding(y < y1) 
+      };
+    case "l1":
+      return { x1: x, y1: y, x2, y2 };
+    case "l2":
+      return { x1, y1, x2: x, y2: y };
+    default:
+      return { x1, y1, x2, y2 };
+  }
+}
+
 export function resizeValue(
   corner,
   type,
   x,
   y,
   padding,
-  { x1, x2, y1, y2 },
+  element,
   offset,
   elementOffset
 ) {
+  const { x1, x2, y1, y2, tool } = element;
+  // Special handling for text elements - scale font size AND resize box
+  if (tool === "text") {
+    // Validate inputs to prevent NaN/Infinity issues
+    if (!isFinite(x) || !isFinite(y) || !isFinite(offset.x) || !isFinite(offset.y)) {
+      return {
+        x1: element.x1,
+        y1: element.y1,
+        x2: element.x2,
+        y2: element.y2,
+        fontSize: element.fontSize || 16,
+        text: element.text,
+        fontFamily: element.fontFamily
+      };
+    }
+    
+    const originalFontSize = elementOffset.fontSize || 16;
+    
+    // Calculate distance from the initial click position to current position
+    const deltaX = x - offset.x;
+    const deltaY = y - offset.y;
+    
+    // For corner handles, calculate scale factor based on distance from center
+    let scaleFactor = 1;
+    
+    if (corner === "br" || corner === "tr" || corner === "bl" || corner === "tl") {
+      // Corner resize - use distance from center approach for font scaling
+      const centerX = (elementOffset.x1 + elementOffset.x2) / 2;
+      const centerY = (elementOffset.y1 + elementOffset.y2) / 2;
+      
+      const initialDistance = Math.sqrt(
+        Math.pow(offset.x - centerX, 2) + 
+        Math.pow(offset.y - centerY, 2)
+      );
+      const currentDistance = Math.sqrt(
+        Math.pow(x - centerX, 2) + 
+        Math.pow(y - centerY, 2)
+      );
+      
+      // Ensure we don't divide by zero and clamp scale factor more conservatively
+      if (initialDistance > 5 && isFinite(currentDistance)) {
+        scaleFactor = Math.max(0.3, Math.min(3, currentDistance / initialDistance));      }
+    } else {
+      // Edge resize - use directional scaling for font size with more conservative scaling
+      let primaryDelta = 0;
+      switch (corner) {
+        case "tt":
+        case "bb":
+          primaryDelta = -deltaY; // Inverse for top/bottom
+          break;
+        case "ll":
+        case "rr":
+          primaryDelta = deltaX;
+          break;
+      }
+      // More conservative scale factor for edge handles to prevent extreme changes
+      scaleFactor = Math.max(0.3, Math.min(3, 1 + (primaryDelta * 0.004)));
+    }
+      // Apply constraints and calculate new font size
+    const newFontSize = Math.max(6, Math.min(300, Math.round(originalFontSize * scaleFactor)));
+    
+    // Get the standard resize coordinates for the bounding box
+    const standardResize = getStandardResize(corner, type, x, y, padding, element, offset, elementOffset);
+    
+    // Validate the coordinates before returning
+    const validatedResize = {
+      x1: isFinite(standardResize.x1) ? standardResize.x1 : element.x1,
+      y1: isFinite(standardResize.y1) ? standardResize.y1 : element.y1,
+      x2: isFinite(standardResize.x2) ? standardResize.x2 : element.x2,
+      y2: isFinite(standardResize.y2) ? standardResize.y2 : element.y2,
+    };
+      // Ensure minimum dimensions (prevent zero or negative width/height)
+    const minWidth = 20; // Increased minimum width for better text visibility
+    const minHeight = 20; // Increased minimum height for better text visibility
+    
+    if (Math.abs(validatedResize.x2 - validatedResize.x1) < minWidth) {
+      if (validatedResize.x2 > validatedResize.x1) {
+        validatedResize.x2 = validatedResize.x1 + minWidth;
+      } else {
+        validatedResize.x1 = validatedResize.x2 + minWidth;
+      }
+    }
+    
+    if (Math.abs(validatedResize.y2 - validatedResize.y1) < minHeight) {
+      if (validatedResize.y2 > validatedResize.y1) {
+        validatedResize.y2 = validatedResize.y1 + minHeight;
+      } else {
+        validatedResize.y1 = validatedResize.y2 + minHeight;
+      }
+    }
+    
+    return {
+      ...validatedResize,
+      // Update font size along with box resize
+      fontSize: isFinite(newFontSize) ? newFontSize : originalFontSize,
+      text: element.text,
+      fontFamily: element.fontFamily
+    };
+  }
+
   const getPadding = (condition) => {
     return condition ? padding : padding * -1;
   };

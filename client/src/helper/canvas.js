@@ -327,20 +327,83 @@ export function draw(element, context) {
   
   // Handle special rendering for text and image elements
   if (tool === "text" && element.text) {
-    // Render actual text
+    // Validate coordinates and font size before rendering
+    if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2)) {
+      return; // Skip rendering invalid coordinates
+    }
+    
+    const fontSize = element.fontSize || 16;
+    if (!isFinite(fontSize) || fontSize <= 0 || fontSize > 1000) {
+      return; // Skip rendering invalid font size
+    }
+    
+    const textWidth = Math.abs(x2 - x1);
+    const textHeight = Math.abs(y2 - y1);
+    
+    // Skip rendering if dimensions are too small
+    if (textWidth < 10 || textHeight < 10) {
+      return;
+    }
+    
+    // Render actual text with wrapping
     context.save();
-    context.font = `${element.fontSize || 16}px ${element.fontFamily || 'Arial'}`;
-    context.fillStyle = rgba(strokeColor, opacity);
-    context.textBaseline = 'top';
+    try {
+      // Ensure font family is valid and fallback to Arial if needed
+      const fontFamily = element.fontFamily || 'Arial, sans-serif';
+      // Clamp font size to ensure it's always valid
+      const clampedFontSize = Math.max(6, Math.min(300, fontSize));
+      context.font = `${clampedFontSize}px ${fontFamily}`;
+      context.fillStyle = rgba(strokeColor, opacity);
+      context.textBaseline = 'top';
+      
+      const lineHeight = clampedFontSize * 1.2;
+      
+      // Split text by explicit line breaks first
+      const paragraphs = element.text.split('\n');
+      let currentY = y1;
     
-    // Handle multi-line text
-    const lines = element.text.split('\n');
-    const lineHeight = (element.fontSize || 16) * 1.2;
-    
-    lines.forEach((line, index) => {
-      context.fillText(line, x1, y1 + (index * lineHeight));
+    paragraphs.forEach((paragraph) => {
+      if (paragraph.trim() === '') {
+        // Empty line - just add spacing
+        currentY += lineHeight;
+        return;
+      }
+      
+      // Wrap text within the bounding box width
+      const words = paragraph.split(' ');
+      let currentLine = '';
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+        const metrics = context.measureText(testLine);
+        
+        if (metrics.width > textWidth && currentLine !== '') {
+          // Current line is too wide, render it and start new line
+          if (currentY + lineHeight <= y1 + textHeight) {
+            context.fillText(currentLine, x1, currentY);
+            currentY += lineHeight;
+          } else {
+            // No more room for text, stop rendering
+            break;
+          }
+          currentLine = words[i];
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      // Render the last line if there's room
+      if (currentLine && currentY + lineHeight <= y1 + textHeight) {
+        context.fillText(currentLine, x1, currentY);
+        currentY += lineHeight;
+      }
     });
-    context.restore();
+    
+    } catch (error) {
+      console.warn("Error rendering text:", error);
+    } finally {
+      context.restore();
+    }
   }
   
   if (tool === "image" && element.imageData) {

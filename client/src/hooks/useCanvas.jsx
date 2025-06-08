@@ -84,12 +84,10 @@ export default function useCanvas() {  const {
       return;
     }
 
-    lockUI(true);
-
-    if (inCorner) {
+    lockUI(true);    if (inCorner) {
       setResizeOldDementions(getElementById(selectedElement.id, elements))
       setElements((prevState) => prevState);
-      setMouseAction({ x: event.clientX, y: event.clientY });
+      setMouseAction({ x: clientX, y: clientY }); // Use transformed canvas coordinates
       setCursor(cornerCursor(inCorner.slug));
       setAction(
         "resize-" + inCorner.slug + (event.shiftKey ? "-shiftkey" : "")
