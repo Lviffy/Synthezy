@@ -22,6 +22,7 @@ import {
   getElementsInSelectionBounds,
   getSelectionBounds,
   minmax,
+  moveElement,
   resizeValue,
   saveElements,
   updateElement,
@@ -63,8 +64,9 @@ export default function useCanvas() {
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
   const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
-  const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [textInputMode, setTextInputMode] = useState(null);
 
   const mousePosition = ({ clientX, clientY }) => {
     clientX = (clientX - translate.x * scale + scaleOffset.x) / scale;
@@ -154,22 +156,81 @@ export default function useCanvas() {
         }
         setSelectionBounds({ x1: clientX, y1: clientY, x2: clientX, y2: clientY });
         setAction("selecting");
-      }
+      }      return;
+    }
 
+    // Handle text tool click-to-add
+    if (selectedTool === "text") {
+      setTextInputMode({ x: clientX, y: clientY });
+      return;
+    }
+
+    // Handle image tool click-to-upload
+    if (selectedTool === "image") {
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/*";
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const element = createElement(
+                clientX,
+                clientY,
+                clientX + img.width,
+                clientY + img.height,
+                style,
+                selectedTool
+              );
+              element.imageData = event.target.result;
+              element.imageUrl = event.target.result;
+              element.naturalWidth = img.width;
+              element.naturalHeight = img.height;
+              setElements((prevState) => [...prevState, element]);
+              if (!lockTool) {
+                setSelectedTool("selection");
+                setSelectedElement(element);
+              }
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      fileInput.click();
       return;
     }
 
     setAction("draw");
-
-    const element = createElement(
-      clientX,
-      clientY,
-      clientX,
-      clientY,
-      style,
-      selectedTool
-    );
-    setElements((prevState) => [...prevState, element]);
+    
+    // Handle draw tool for freehand drawing
+    if (selectedTool === "draw") {
+      setIsDrawing(true);
+      const element = createElement(
+        clientX,
+        clientY,
+        clientX,
+        clientY,
+        style,
+        selectedTool
+      );
+      element.points = [{ x: clientX, y: clientY }];
+      setElements((prevState) => [...prevState, element]);
+    } else {
+      // Regular shape drawing
+      const element = createElement(
+        clientX,
+        clientY,
+        clientX,
+        clientY,
+        style,
+        selectedTool
+      );
+      setElements((prevState) => [...prevState, element]);
+    }
   };
 
   const handleMouseMove = (event) => {
@@ -191,25 +252,37 @@ export default function useCanvas() {
       setIsInElement(true);
     } else {
       setIsInElement(false);
-    }
-
-    if (action == "draw") {
+    }    if (action == "draw") {
       const { id } = elements.at(-1);
-      updateElement(
-        id,
-        { x2: clientX, y2: clientY },
-        setElements,
-        elements,
-        true
-      );
+      
+      if (selectedTool === "draw" && isDrawing) {
+        // Add point to freehand path
+        const element = elements.at(-1);
+        const newPoints = [...element.points, { x: clientX, y: clientY }];
+        updateElement(
+          id,
+          { points: newPoints, x2: clientX, y2: clientY },
+          setElements,
+          elements,
+          true
+        );
+      } else {
+        // Regular shape drawing
+        updateElement(
+          id,
+          { x2: clientX, y2: clientY },
+          setElements,
+          elements,
+          true
+        );
+      }
     } else if (action == "selecting") {
       // Update marquee selection bounds
       setSelectionBounds(prev => ({
         ...prev,
         x2: clientX,
         y2: clientY
-      }));    } else if (action == "move") {
-      if (selectedElements.length > 1 && initialSelectedElements.length > 0) {
+      }));    } else if (action == "move") {      if (selectedElements.length > 1 && initialSelectedElements.length > 0) {
         // Multi-element movement: calculate delta from initial mouse position
         const deltaX = clientX - mouseAction.x;
         const deltaY = clientY - mouseAction.y;
@@ -219,18 +292,27 @@ export default function useCanvas() {
           prevState.map((element) => {
             const initialElement = initialSelectedElements.find(init => init.id === element.id);
             if (initialElement) {
-              return {
+              const updatedElement = {
                 ...element,
                 x1: initialElement.x1 + deltaX,
                 y1: initialElement.y1 + deltaY,
                 x2: initialElement.x2 + deltaX,
                 y2: initialElement.y2 + deltaY
               };
+              
+              // For draw tool elements, also move all points in the drawing path
+              if (element.tool === "draw" && initialElement.points && initialElement.points.length > 0) {
+                updatedElement.points = initialElement.points.map(point => ({
+                  x: point.x + deltaX,
+                  y: point.y + deltaY
+                }));
+              }
+              
+              return updatedElement;
             }
             return element;
           })
-        );
-      } else {
+        );      } else {
         // Single element movement
         const { offsetX, offsetY } = selectedElement;
         const currentX = clientX - offsetX;
@@ -238,17 +320,15 @@ export default function useCanvas() {
         const element = getElementById(selectedElement.id, elements);
         
         if (element) {
-          const width = element.x2 - element.x1;
-          const height = element.y2 - element.y1;
+          const deltaX = currentX - element.x1;
+          const deltaY = currentY - element.y1;
+          
+          // Use moveElement to handle all element types including draw tools
+          const movedElement = moveElement(element, deltaX, deltaY);
           
           updateElement(
             element.id,
-            { 
-              x1: currentX, 
-              y1: currentY, 
-              x2: currentX + width, 
-              y2: currentY + height 
-            },
+            movedElement,
             setElements,
             elements,
             true
@@ -327,16 +407,40 @@ export default function useCanvas() {
     const { clientX, clientY } = mousePosition(event);
     if (clientX == mouseAction.x && clientY == mouseAction.y && currentAction !== "move") {
       setElements("prevState");
-      return;
-    }
+      return;    }
 
     if (currentAction == "draw") {
-      const lastElement = elements.at(-1);
-      const { id, x1, y1, x2, y2 } = adjustCoordinates(lastElement);
-      updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
+      if (selectedTool === "draw") {
+        setIsDrawing(false);
+        // Finalize freehand drawing
+        const lastElement = elements.at(-1);
+        if (lastElement && lastElement.points && lastElement.points.length > 1) {
+          // Calculate bounding box from points
+          const xCoords = lastElement.points.map(p => p.x);
+          const yCoords = lastElement.points.map(p => p.y);
+          const minX = Math.min(...xCoords);
+          const maxX = Math.max(...xCoords);
+          const minY = Math.min(...yCoords);
+          const maxY = Math.max(...yCoords);
+          
+          updateElement(
+            lastElement.id,
+            { x1: minX, y1: minY, x2: maxX, y2: maxY },
+            setElements,
+            elements,
+            true
+          );
+        }
+      } else {
+        // Regular shape drawing
+        const lastElement = elements.at(-1);
+        const { id, x1, y1, x2, y2 } = adjustCoordinates(lastElement);
+        updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
+      }
+      
       if (!lockTool) {
         setSelectedTool("selection");
-        setSelectedElement(lastElement);
+        setSelectedElement(elements.at(-1));
       }
     }
 
@@ -452,31 +556,22 @@ export default function useCanvas() {
               10
             );
           }
-        }
-
-        if (key == "ArrowLeft") {
+        }        if (key == "ArrowLeft") {
           prevent();
           if (selectedElements.length > 1) {
+            // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
                 const selectedEl = selectedElements.find(sel => sel.id === element.id);
                 if (selectedEl) {
-                  return {
-                    ...element,
-                    x1: element.x1 - 1,
-                    x2: element.x2 - 1
-                  };
+                  return moveElement(element, -1, 0);
                 }
                 return element;
               })
             );
             // Update selectedElements state to reflect new positions
             setSelectedElements(prevSelected => 
-              prevSelected.map(sel => ({
-                ...sel,
-                x1: sel.x1 - 1,
-                x2: sel.x2 - 1
-              }))
+              prevSelected.map(sel => moveElement(sel, -1, 0))
             );
           } else {
             arrowMove(selectedElement, -1, 0, setElements);
@@ -485,26 +580,19 @@ export default function useCanvas() {
         if (key == "ArrowUp") {
           prevent();
           if (selectedElements.length > 1) {
+            // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
                 const selectedEl = selectedElements.find(sel => sel.id === element.id);
                 if (selectedEl) {
-                  return {
-                    ...element,
-                    y1: element.y1 - 1,
-                    y2: element.y2 - 1
-                  };
+                  return moveElement(element, 0, -1);
                 }
                 return element;
               })
             );
             // Update selectedElements state to reflect new positions
             setSelectedElements(prevSelected => 
-              prevSelected.map(sel => ({
-                ...sel,
-                y1: sel.y1 - 1,
-                y2: sel.y2 - 1
-              }))
+              prevSelected.map(sel => moveElement(sel, 0, -1))
             );
           } else {
             arrowMove(selectedElement, 0, -1, setElements);
@@ -513,26 +601,19 @@ export default function useCanvas() {
         if (key == "ArrowRight") {
           prevent();
           if (selectedElements.length > 1) {
+            // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
                 const selectedEl = selectedElements.find(sel => sel.id === element.id);
                 if (selectedEl) {
-                  return {
-                    ...element,
-                    x1: element.x1 + 1,
-                    x2: element.x2 + 1
-                  };
+                  return moveElement(element, 1, 0);
                 }
                 return element;
               })
             );
             // Update selectedElements state to reflect new positions
             setSelectedElements(prevSelected => 
-              prevSelected.map(sel => ({
-                ...sel,
-                x1: sel.x1 + 1,
-                x2: sel.x2 + 1
-              }))
+              prevSelected.map(sel => moveElement(sel, 1, 0))
             );
           } else {
             arrowMove(selectedElement, 1, 0, setElements);
@@ -541,26 +622,19 @@ export default function useCanvas() {
         if (key == "ArrowDown") {
           prevent();
           if (selectedElements.length > 1) {
+            // Multi-element arrow movement
             setElements(prevState => 
               prevState.map(element => {
                 const selectedEl = selectedElements.find(sel => sel.id === element.id);
                 if (selectedEl) {
-                  return {
-                    ...element,
-                    y1: element.y1 + 1,
-                    y2: element.y2 + 1
-                  };
+                  return moveElement(element, 0, 1);
                 }
                 return element;
               })
             );
             // Update selectedElements state to reflect new positions
             setSelectedElements(prevSelected => 
-              prevSelected.map(sel => ({
-                ...sel,
-                y1: sel.y1 + 1,
-                y2: sel.y2 + 1
-              }))
+              prevSelected.map(sel => moveElement(sel, 0, 1))
             );
           } else {
             arrowMove(selectedElement, 0, 1, setElements);
@@ -643,7 +717,6 @@ export default function useCanvas() {
       window.removeEventListener("wheel", fakeWheel);
     };
   }, []);
-
   return {
     canvasRef,
     handleMouseDown,
@@ -651,5 +724,7 @@ export default function useCanvas() {
     handleMouseUp,
     handleWheel,
     dimension,
+    textInputMode,
+    setTextInputMode,
   };
 }

@@ -13,6 +13,45 @@ export function isWithinElement(x, y, element) {
 
       const offset = distance(a, b) - (distance(a, c) + distance(b, c));
       return Math.abs(offset) < (0.05 * strokeWidth || 1);
+      
+    case "draw":
+      // For freehand drawing, check if point is near any segment of the path
+      if (element.points && element.points.length > 1) {
+        const threshold = strokeWidth + 5; // Add some tolerance
+        
+        for (let i = 0; i < element.points.length - 1; i++) {
+          const p1 = element.points[i];
+          const p2 = element.points[i + 1];
+          const lineDistance = distance(p1, p2) - (distance(p1, { x, y }) + distance(p2, { x, y }));
+          
+          if (Math.abs(lineDistance) < threshold * 0.1) {
+            return true;
+          }
+        }
+        return false;
+      }
+      // Fallback to bounding box
+      return x >= Math.min(x1, x2) - strokeWidth && 
+             x <= Math.max(x1, x2) + strokeWidth &&
+             y >= Math.min(y1, y2) - strokeWidth && 
+             y <= Math.max(y1, y2) + strokeWidth;
+             
+    case "text":
+      // Text elements use bounding box detection
+      const minX = Math.min(x1, x2) - strokeWidth / 2;
+      const maxX = Math.max(x1, x2) + strokeWidth / 2;
+      const minY = Math.min(y1, y2) - strokeWidth / 2;
+      const maxY = Math.max(y1, y2) + strokeWidth / 2;
+      return x >= minX && x <= maxX && y >= minY && y <= maxY;
+      
+    case "image":
+      // Image elements use bounding box detection
+      const imgMinX = Math.min(x1, x2);
+      const imgMaxX = Math.max(x1, x2);
+      const imgMinY = Math.min(y1, y2);
+      const imgMaxY = Math.max(y1, y2);
+      return x >= imgMinX && x <= imgMaxX && y >= imgMinY && y <= imgMaxY;
+      
     case "circle":
       const width = x2 - x1 + strokeWidth;
       const height = y2 - y1 + strokeWidth;
@@ -36,12 +75,12 @@ export function isWithinElement(x, y, element) {
 
     case "diamond":
     case "rectangle":
-      const minX = Math.min(x1, x2) - strokeWidth / 2;
-      const maxX = Math.max(x1, x2) + strokeWidth / 2;
-      const minY = Math.min(y1, y2) - strokeWidth / 2;
-      const maxY = Math.max(y1, y2) + strokeWidth / 2;
+      const rectMinX = Math.min(x1, x2) - strokeWidth / 2;
+      const rectMaxX = Math.max(x1, x2) + strokeWidth / 2;
+      const rectMinY = Math.min(y1, y2) - strokeWidth / 2;
+      const rectMaxY = Math.max(y1, y2) + strokeWidth / 2;
 
-      return x >= minX && x <= maxX && y >= minY && y <= maxY;
+      return x >= rectMinX && x <= rectMaxX && y >= rectMinY && y <= rectMaxY;
   }
 }
 
@@ -50,7 +89,22 @@ export function getElementPosition(x, y, elements) {
 }
 
 export function createElement(x1, y1, x2, y2, style, tool) {
-  return { id: uuid(), x1, y1, x2, y2, ...style, tool };
+  const baseElement = { id: uuid(), x1, y1, x2, y2, ...style, tool };
+  
+  // Add special properties for different tools
+  if (tool === "draw") {
+    return { ...baseElement, points: [{ x: x1, y: y1 }] };
+  }
+  
+  if (tool === "text") {
+    return { ...baseElement, text: "", fontSize: 16, fontFamily: "Arial" };
+  }
+  
+  if (tool === "image") {
+    return { ...baseElement, imageData: null, imageUrl: null };
+  }
+  
+  return baseElement;
 }
 
 export function updateElement(
@@ -105,13 +159,24 @@ export function duplicateElement(
 }
 
 export function moveElement(element, factorX, factorY = null) {
-  return {
+  const deltaY = factorY ?? factorX;
+  const movedElement = {
     ...element,
     x1: element.x1 + factorX,
-    y1: element.y1 + (factorY ?? factorX),
+    y1: element.y1 + deltaY,
     x2: element.x2 + factorX,
-    y2: element.y2 + (factorY ?? factorX),
+    y2: element.y2 + deltaY,
   };
+
+  // For draw tool elements, also move all points in the drawing path
+  if (element.tool === "draw" && element.points && element.points.length > 0) {
+    movedElement.points = element.points.map(point => ({
+      x: point.x + factorX,
+      y: point.y + deltaY
+    }));
+  }
+
+  return movedElement;
 }
 
 export function moveElementLayer(id, to, setState, state) {
@@ -228,7 +293,7 @@ export function saveElements(elements) {
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
-  link.download = "canvas.sketchFlow";
+  link.download = "canvas.flowstate";
   link.href = url;
   link.click();
 }
@@ -249,10 +314,9 @@ export function uploadElements(setElements) {
 
     reader.readAsText(file);
   }
-
   const fileInput = document.createElement("input");
   fileInput.type = "file";
-  fileInput.accept = ".kyrosDraw";
+  fileInput.accept = ".flowstate";
   fileInput.onchange = uploadJSON;
   fileInput.click();
 }

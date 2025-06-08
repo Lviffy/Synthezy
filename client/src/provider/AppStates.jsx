@@ -8,6 +8,9 @@ import {
   Hand,
   Lock,
   Arrow,
+  Pencil,
+  Text,
+  Image,
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { getElementById, minmax } from "../helper/element";
@@ -127,11 +130,27 @@ export function AppContextProvider({ children }) {
         icon: Arrow,
         title: "Arrow",
         toolAction,
-      },
-      {
+      },      {
         slug: "line",
         icon: Line,
         title: "Line",
+        toolAction,
+      },
+      {
+        slug: "draw",
+        icon: Pencil,
+        title: "Draw",
+        toolAction,
+      },      {
+        slug: "text",
+        icon: Text,
+        title: "Add Text - Click to Type",
+        toolAction,
+      },
+      {
+        slug: "image",
+        icon: Image,
+        title: "Insert Image",
         toolAction,
       },
     ],
