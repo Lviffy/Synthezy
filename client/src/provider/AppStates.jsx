@@ -373,10 +373,10 @@ export function AppContextProvider({ children }) {
   }, [session]);
   return (
     <AppContext.Provider
-      value={{
-        action,
+      value={{        action,
         setAction,
         tools,
+        toolAction,
         selectedTool,
         setSelectedTool,
         elements,

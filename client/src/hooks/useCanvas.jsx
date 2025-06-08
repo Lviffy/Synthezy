@@ -33,6 +33,8 @@ import useKeys from "./useKeys";
 export default function useCanvas() {  const {
     selectedTool,
     setSelectedTool,
+    tools,
+    toolAction,
     action,
     setAction,
     elements,
@@ -68,9 +70,38 @@ export default function useCanvas() {  const {
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
   const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
-  const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
+    // Helper function to get tool by number (1-12)
+  const getToolByNumber = (number) => {
+    let toolCounter = 0;
+    for (const toolGroup of tools) {
+      for (const tool of toolGroup) {
+        toolCounter++;
+        if (toolCounter === number) {
+          return tool;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Test function to verify tools array
+  const testTools = () => {
+    console.log('Available tools:', tools);
+    for (let i = 1; i <= 12; i++) {
+      const tool = getToolByNumber(i);
+      console.log(`Tool ${i}:`, tool ? tool.slug : 'not found');
+    }
+  };
+
+  // Call test function once on mount
+  useEffect(() => {
+    if (tools && tools.length > 0) {
+      testTools();
+    }
+  }, [tools]);
+
   // Debounced zoom handler to prevent excessive updates
   const debouncedZoom = useMemo(
     () => {
@@ -659,11 +690,55 @@ export default function useCanvas() {  const {
 
     context.restore();
   }, [elements, selectedElement, scale, translate, dimension]);
-
-  useEffect(() => {
-    const keyDownFunction = (event) => {
+  useEffect(() => {    const keyDownFunction = (event) => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const prevent = () => event.preventDefault();
+      
+      // Skip keyboard shortcuts if user is typing in text input
+      if (textInputMode) {
+        return;
+      }
+      
+      // Skip if user is typing in any input field
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.contentEditable === 'true'
+      )) {
+        return;
+      }
+        // Handle tool number shortcuts (1-9, 0 for tool 10, -, = for tools 11-12)
+      if (!ctrlKey && !metaKey && !shiftKey) {
+        let toolNumber = null;
+        
+        console.log('Key pressed:', key); // Debug log
+        
+        if (key >= '1' && key <= '9') {
+          toolNumber = parseInt(key);
+        } else if (key === '0') {
+          toolNumber = 10;
+        } else if (key === 'i') {
+          toolNumber = 11;
+        } else if (key === '=') {
+          toolNumber = 12;
+        }
+        
+        if (toolNumber) {
+          console.log('Looking for tool number:', toolNumber); // Debug log
+          const tool = getToolByNumber(toolNumber);
+          console.log('Found tool:', tool); // Debug log
+          
+          if (tool) {
+            prevent();
+            console.log(`Selecting tool ${toolNumber}: ${tool.slug}`); // Debug log
+            tool.toolAction(tool.slug);
+            return;
+          } else {
+            console.log(`Tool ${toolNumber} not found`); // Debug log
+          }
+        }
+      }
       
       // Handle multi-selection shortcuts
       if (ctrlKey || metaKey) {
@@ -814,13 +889,11 @@ export default function useCanvas() {  const {
           onZoom("fit");
         }
       }
-    };
-
-    window.addEventListener("keydown", keyDownFunction, { passive: false });
+    };    window.addEventListener("keydown", keyDownFunction, { passive: false });
     return () => {
       window.removeEventListener("keydown", keyDownFunction);
     };
-  }, [undo, redo, selectedElement, selectedElements, elements, setElements, setSelectedElement, setSelectedElements]);
+  }, [undo, redo, selectedElement, selectedElements, elements, setElements, setSelectedElement, setSelectedElements, tools, toolAction, textInputMode]);
 
   useEffect(() => {
     if (selectedTool != "selection") {

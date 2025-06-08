@@ -37,3 +37,7 @@ export const CANVAS_BACKGROUND = [
   "rgb(165, 216, 255)",
   "rgb(255, 236, 153)",
 ];
+
+export const SHORT_CUTS = [
+  // Add keyboard shortcuts here if needed for the shortKey function
+];
