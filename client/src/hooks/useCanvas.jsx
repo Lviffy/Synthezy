@@ -12,6 +12,7 @@ import {
 import {
   adjustCoordinates,
   arrowMove,
+  copyElements,
   createElement,
   deleteElement,
   deleteMultipleElements,
@@ -23,6 +24,7 @@ import {
   getSelectionBounds,
   minmax,
   moveElement,
+  pasteElements,
   resizeValue,
   saveElements,
   updateElement,
@@ -67,10 +69,10 @@ export default function useCanvas() {  const {
   const dimension = useDimension();
   const [isInElement, setIsInElement] = useState(false);
   const [inCorner, setInCorner] = useState(false);
-  const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));
-  const [cursor, setCursor] = useState("default");
+  const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));  const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
+  const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
     // Helper function to get tool by number (1-12)
   const getToolByNumber = (number) => {
@@ -131,7 +133,10 @@ export default function useCanvas() {  const {
     clientY = (clientY - translate.y * scale + scaleOffset.y) / scale;
     return { clientX, clientY };
   };  const handleMouseDown = (event) => {
-    const { clientX, clientY } = mousePosition(event);    // Handle text tool click-to-add (PRIORITY - before lockUI)
+    const { clientX, clientY } = mousePosition(event);
+    setCurrentMousePosition({ x: clientX, y: clientY });
+    
+    // Handle text tool click-to-add (PRIORITY - before lockUI)
     if (selectedTool === "text") {
       // Use direct screen coordinates for fixed positioning
       setTextInputMode({ 
@@ -300,6 +305,9 @@ export default function useCanvas() {  const {
       lastUpdateTime.current = now;
       
       const { clientX, clientY } = mousePosition(event);
+
+    // Update current mouse position for paste functionality
+    setCurrentMousePosition({ x: clientX, y: clientY });
 
     if (selectedElement) {
       setInCorner(
@@ -738,14 +746,33 @@ export default function useCanvas() {  const {
           }
         }
       }
-      
-      // Handle multi-selection shortcuts
+        // Handle multi-selection shortcuts
       if (ctrlKey || metaKey) {
         if (key.toLowerCase() === "a") {
           prevent();
           // Select all elements
           setSelectedElements(elements);
           setSelectedElement(elements.length > 0 ? elements[0] : null);
+          return;
+        }
+
+        // Copy elements (Ctrl+C) - works with multi-selection even without primary element
+        if (key.toLowerCase() === "c") {
+          prevent();
+          if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0) {
+            copyElements(selectedElements);
+          } else if (selectedElement) {
+            copyElements([selectedElement]);
+          }
+          return;
+        }        // Paste elements (Ctrl+V) - works without any selection
+        if (key.toLowerCase() === "v") {
+          prevent();
+          // Use current mouse position for paste location, fallback to center if no position tracked
+          const pastePosition = currentMousePosition.x !== 0 || currentMousePosition.y !== 0 
+            ? { x: currentMousePosition.x, y: currentMousePosition.y }
+            : { x: dimension.width / 2 / scale, y: dimension.height / 2 / scale }; // Fallback to canvas center
+          pasteElements(setElements, setSelectedElements, setSelectedElement, pastePosition);
           return;
         }
       }
@@ -760,9 +787,7 @@ export default function useCanvas() {  const {
           deleteElement(selectedElement, setElements, setSelectedElement);
           return;
         }
-      }
-      
-      if (selectedElement) {        if (ctrlKey && key.toLowerCase() == "d") {
+      }      if (selectedElement) {        if (ctrlKey && key.toLowerCase() == "d") {
           prevent();
           if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             duplicateMultipleElements(selectedElements, setElements, setSelectedElements, 10);
@@ -774,7 +799,7 @@ export default function useCanvas() {  const {
               10
             );
           }
-        }        if (key == "ArrowLeft") {
+        }if (key == "ArrowLeft") {
           prevent();
           if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
             // Multi-element arrow movement

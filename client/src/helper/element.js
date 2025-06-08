@@ -648,3 +648,94 @@ export function duplicateMultipleElements(selectedElements, setState, setSelecte
   
   setSelectedElements(duplicatedElements);
 }
+
+// Clipboard functionality
+let clipboardData = null;
+
+export function copyElements(selectedElements) {
+  if (!selectedElements || selectedElements.length === 0) return false;
+  
+  // Create a deep copy of the elements to avoid reference issues
+  clipboardData = selectedElements.map(element => ({
+    ...element,
+    // Remove the id so paste will create new ids
+    id: undefined
+  }));
+  
+  return true;
+}
+
+export function pasteElements(setState, setSelectedElements, setSelectedElement, positionOrOffset = { x: 20, y: 20 }) {
+  if (!clipboardData || clipboardData.length === 0) return false;
+  
+  const pastedElements = [];
+  
+  setState((prevState) => {
+    const newElements = [...prevState];
+    
+    // Determine if we're using position-based or offset-based pasting
+    const isPositionBased = positionOrOffset && (positionOrOffset.x > 100 || positionOrOffset.y > 100);
+    
+    // Calculate the bounds of the copied elements to center them at cursor
+    let bounds = null;
+    if (isPositionBased && clipboardData.length > 0) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      clipboardData.forEach(element => {
+        minX = Math.min(minX, element.x1, element.x2);
+        minY = Math.min(minY, element.y1, element.y2);
+        maxX = Math.max(maxX, element.x1, element.x2);
+        maxY = Math.max(maxY, element.y1, element.y2);
+      });
+      
+      bounds = {
+        centerX: (minX + maxX) / 2,
+        centerY: (minY + maxY) / 2
+      };
+    }
+    
+    clipboardData.forEach((element) => {
+      let offsetX, offsetY;
+      
+      if (isPositionBased) {
+        // Position-based: paste at cursor position (center the content at cursor)
+        offsetX = positionOrOffset.x - bounds.centerX;
+        offsetY = positionOrOffset.y - bounds.centerY;
+      } else {
+        // Offset-based: use traditional offset (fallback for old behavior)
+        offsetX = positionOrOffset.x || 20;
+        offsetY = positionOrOffset.y || 20;
+      }
+      
+      const pasted = {
+        ...element,
+        id: uuid(),
+        x1: element.x1 + offsetX,
+        y1: element.y1 + offsetY,
+        x2: element.x2 + offsetX,
+        y2: element.y2 + offsetY,
+        // For draw tool with points, also offset the points
+        ...(element.points && {
+          points: element.points.map(point => ({
+            x: point.x + offsetX,
+            y: point.y + offsetY
+          }))
+        })
+      };
+      pastedElements.push(pasted);
+      newElements.push(pasted);
+    });
+    
+    return newElements;
+  });
+  
+  // Select the pasted elements
+  setSelectedElements(pastedElements);
+  if (pastedElements.length === 1) {
+    setSelectedElement(pastedElements[0]);
+  } else if (pastedElements.length > 1) {
+    setSelectedElement(pastedElements[0]); // Set primary selection to first pasted element
+  }
+  
+  return true;
+}
