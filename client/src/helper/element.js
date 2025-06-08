@@ -389,19 +389,18 @@ export function resizeValue(
   // Special handling for text elements - intelligent text box behavior
   if (tool === "text") {
     // Validate inputs to prevent NaN/Infinity issues
-    if (!isFinite(x) || !isFinite(y) || !isFinite(offset.x) || !isFinite(offset.y)) {
-      return {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(offset.x) || !isFinite(offset.y)) {      return {
         x1: element.x1,
         y1: element.y1,
         x2: element.x2,
         y2: element.y2,
-        fontSize: element.fontSize || 16,
+        fontSize: element.fontSize || 24,
         text: element.text,
         fontFamily: element.fontFamily
       };
     }
     
-    const originalFontSize = elementOffset.fontSize || 16;
+    const originalFontSize = elementOffset.fontSize || 24;
     
     // Get the standard resize coordinates for the bounding box first
     const standardResize = getStandardResize(corner, type, x, y, padding, element, offset, elementOffset);

@@ -50,7 +50,7 @@ export function AppContextProvider({ children }) {
   const [scale, setScale] = useState(1);
   const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
   const [lockTool, setLockTool] = useState(false);  const [style, setStyle] = useState({
-    strokeWidth: 3,
+    strokeWidth: 1.5,
     strokeColor: STROKE_COLORS[0],
     strokeStyle: STROKE_STYLES[0].slug,
     fill: BACKGROUND_COLORS[0],

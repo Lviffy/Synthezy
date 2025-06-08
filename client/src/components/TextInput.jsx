@@ -16,8 +16,8 @@ export default function TextInput({ position, onComplete, style, canvasPosition 
     return () => clearTimeout(timer);
   }, []);  const handleComplete = () => {
     if (text.trim()) {
-      // Use a default font size for initial text creation
-      const fontSize = 16;
+      // Use a default font size for initial text creation - increased for better readability
+      const fontSize = 24;
         // Estimate text dimensions using canvas measureText
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');

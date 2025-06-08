@@ -332,7 +332,7 @@ export function draw(element, context) {
       return; // Skip rendering invalid coordinates
     }
     
-    const fontSize = element.fontSize || 16;
+    const fontSize = element.fontSize || 24;
     if (!isFinite(fontSize) || fontSize <= 0 || fontSize > 1000) {
       return; // Skip rendering invalid font size
     }
