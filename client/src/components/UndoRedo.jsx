@@ -11,14 +11,12 @@ export default function UndoRedo() {
   const handleUndo = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Undo clicked");
     undo();
   };
   
   const handleRedo = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Redo clicked");
     redo();
   };
   

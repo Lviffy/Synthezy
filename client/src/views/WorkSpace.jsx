@@ -12,20 +12,15 @@ import { socket } from "../api/socket";
 export default function WorkSpace() {
   const { setSession, textInputMode, setTextInputMode, style } = useAppContext();
   const [searchParams] = useSearchParams();
-  useEffect(() => {
-    const room = searchParams.get("room");
+  useEffect(() => {    const room = searchParams.get("room");
 
     if (room) {
-      console.log("🔗 Joining collaboration room from URL:", room);
       setSession(room);
       
       // Add a small delay to ensure socket is connected
       setTimeout(() => {
-        console.log("📡 Emitting join event for room:", room);
         socket.emit("join", room);
       }, 100);
-    } else {
-      console.log("No room parameter found in URL");
     }
   }, [searchParams, setSession]);
   return (

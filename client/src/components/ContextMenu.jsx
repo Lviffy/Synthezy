@@ -240,11 +240,9 @@ export default function ContextMenu() {
     }
     setContextMenu(null);
   };
-
   const handleGroup = () => {
     if (selectedElements && selectedElements.length > 1) {
       // TODO: Implement grouping functionality
-      console.log('Group elements', selectedElements);
     }
     setContextMenu(null);
   };
@@ -252,7 +250,6 @@ export default function ContextMenu() {
   const handleUngroup = () => {
     if (selectedElement && selectedElement.type === 'group') {
       // TODO: Implement ungrouping functionality
-      console.log('Ungroup element', selectedElement);
     }
     setContextMenu(null);
   };
@@ -350,11 +347,9 @@ export default function ContextMenu() {
         // Convert canvas to blob
         canvas.toBlob(async (blob) => {
           if (blob && navigator.clipboard && window.ClipboardItem) {
-            try {
-              await navigator.clipboard.write([
+            try {              await navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
               ]);
-              console.log('Canvas copied to clipboard as PNG');
             } catch (err) {
               console.error('Failed to copy to clipboard:', err);
               // Fallback: show user they can manually copy
@@ -373,10 +368,8 @@ export default function ContextMenu() {
     try {
       // Create SVG representation
       const svgContent = generateSVGFromElements(selectedElements || (selectedElement ? [selectedElement] : elements));
-      
-      if (navigator.clipboard && navigator.clipboard.writeText) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(svgContent);
-        console.log('Elements copied to clipboard as SVG');
       } else {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
@@ -550,14 +543,11 @@ export default function ContextMenu() {
     }
     setContextMenu(null);
   };
-
   const handleAddToLibrary = () => {
     if (selectedElements && selectedElements.length > 0) {
       // TODO: Implement add to library
-      console.log('Add to library');
     } else if (selectedElement) {
       // TODO: Implement add to library
-      console.log('Add to library');
     }
     setContextMenu(null);
   };

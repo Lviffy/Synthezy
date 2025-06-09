@@ -10,7 +10,6 @@ export default function Menu() {
   const handleMenuToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Menu button clicked");
     setShow((prev) => !prev);
   };
 
@@ -34,17 +33,14 @@ export default function Menu() {
 
 function MenuBox({ elements, setElements, setShow }) {
   const uploadJson = () => {
-    console.log("Upload clicked");
     uploadElements(setElements);
   };
   
   const downloadJson = () => {
-    console.log("Download clicked");
     saveElements(elements);
   };
   
   const reset = () => {
-    console.log("Reset clicked");
     setElements([]);
   };
 

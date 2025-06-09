@@ -14,7 +14,6 @@ export default function Collaboration() {
 
   const startSession = () => {
     const sessionId = uuid();
-    console.log("🚀 Starting new collaboration session:", sessionId);
     setSearchParams({ room: sessionId });
     setSession(sessionId);
     socket.emit("join", sessionId);
@@ -31,7 +30,6 @@ export default function Collaboration() {
   const handleShareClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Share button clicked");
     setOpen(true);
   };
 

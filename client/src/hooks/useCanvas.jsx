@@ -817,13 +817,10 @@ export default function useCanvas() {  const {
         
         if (toolNumber) {
           const tool = getToolByNumber(toolNumber);
-          
-          if (tool) {
+            if (tool) {
             prevent();
             tool.toolAction(tool.slug);
             return;
-          } else {
-            console.log(`Tool ${toolNumber} not found`); // Debug log
           }
         }
       }

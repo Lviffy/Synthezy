@@ -78,13 +78,9 @@ export function AppContextProvider({ children }) {
     lastDistance: 0,
     lastScale: 1,
     initialTouches: null
-  });
-  useEffect(() => {
+  });  useEffect(() => {
     if (session == null) {
-      console.log("💾 Saving", elements?.length || 0, "elements to localStorage");
       localStorage.setItem("elements", JSON.stringify(elements));
-    } else {
-      console.log("🔗 Session active, not saving to localStorage. Current elements:", elements?.length || 0);
     }
 
     if (!getElementById(selectedElement?.id, elements)) {
@@ -370,11 +366,8 @@ export function AppContextProvider({ children }) {
     ],
   ];  useEffect(() => {
     if (session) {
-      console.log("Setting up collaboration socket listeners for session:", session);
-      
       // Set up socket listeners for collaboration
       const handleSetElements = (data) => {
-        console.log("📥 Received setElements from collaboration:", data?.length || 0, "elements");
         if (data && Array.isArray(data)) {
           setElements(data, true, false);
         }
@@ -384,7 +377,6 @@ export function AppContextProvider({ children }) {
       
       // Cleanup listeners when session ends
       return () => {
-        console.log("Cleaning up collaboration socket listeners");
         socket.off("setElements", handleSetElements);
       };
     }
