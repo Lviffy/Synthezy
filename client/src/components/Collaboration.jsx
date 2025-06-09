@@ -14,6 +14,7 @@ export default function Collaboration() {
 
   const startSession = () => {
     const sessionId = uuid();
+    console.log("🚀 Starting new collaboration session:", sessionId);
     setSearchParams({ room: sessionId });
     setSession(sessionId);
     socket.emit("join", sessionId);
@@ -77,8 +78,53 @@ function CreateSession({ startSession }) {
 }
 
 function SessionInfo({ endSession }) {
-  const copy = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const [copyStatus, setCopyStatus] = useState('Copy link');
+  const [copyState, setCopyState] = useState('default'); // 'default', 'success', 'error'
+
+  const copy = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+        setCopyStatus('Copied!');
+        setCopyState('success');
+        setTimeout(() => {
+          setCopyStatus('Copy link');
+          setCopyState('default');
+        }, 2000);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          setCopyStatus('Copied!');
+          setCopyState('success');
+        } else {
+          throw new Error('Copy command failed');
+        }
+        
+        setTimeout(() => {
+          setCopyStatus('Copy link');
+          setCopyState('default');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      setCopyStatus('Failed to copy');
+      setCopyState('error');
+      setTimeout(() => {
+        setCopyStatus('Copy link');
+        setCopyState('default');
+      }, 2000);
+    }
   };
 
   return (
@@ -94,8 +140,13 @@ function SessionInfo({ endSession }) {
             value={window.location.href}
             disabled
           />
-          <button type="button" onClick={copy}>
-            Copy link
+          <button 
+            type="button" 
+            onClick={copy}
+            className={`copy-button copy-button--${copyState}`}
+            disabled={copyState !== 'default'}
+          >
+            {copyStatus}
           </button>
         </div>
       </div>

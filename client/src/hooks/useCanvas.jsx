@@ -66,6 +66,7 @@ export default function useCanvas() {  const {
     setContextMenu,
     currentMousePosition,
     setCurrentMousePosition,
+    session,
   } = useAppContext();
   const canvasRef = useRef(null);
   const lastUpdateTime = useRef(0);
@@ -363,9 +364,12 @@ export default function useCanvas() {  const {
     }
   };  const handleMouseMove = (event) => {
     try {
-      // Throttle mouse move updates during heavy dragging to prevent crashes
+      // Smart throttling: more responsive during collaboration, balanced for solo use
       const now = performance.now();
-      if (action === "move" && now - lastUpdateTime.current < 16) { // ~60fps
+      const isCollaborating = !!session;
+      const throttleInterval = isCollaborating ? 8 : 16; // ~125fps for collaboration, ~60fps for solo
+      
+      if (action === "move" && now - lastUpdateTime.current < throttleInterval) {
         return;
       }
       lastUpdateTime.current = now;
@@ -507,9 +511,11 @@ export default function useCanvas() {  const {
         }
       }    } else if (action == "translate") {
       const now = performance.now();
+      const isCollaborating = !!session;
+      const translateThrottle = isCollaborating ? 12 : 16; // More responsive during collaboration
       
-      // Throttle translate updates to 60fps for smooth dragging
-      if (now - lastTranslateUpdate.current < 16) {
+      // Throttle translate updates for smooth dragging
+      if (now - lastTranslateUpdate.current < translateThrottle) {
         return;
       }
       lastTranslateUpdate.current = now;

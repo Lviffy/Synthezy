@@ -79,10 +79,12 @@ export function AppContextProvider({ children }) {
     lastScale: 1,
     initialTouches: null
   });
-
   useEffect(() => {
     if (session == null) {
+      console.log("💾 Saving", elements?.length || 0, "elements to localStorage");
       localStorage.setItem("elements", JSON.stringify(elements));
+    } else {
+      console.log("🔗 Session active, not saving to localStorage. Current elements:", elements?.length || 0);
     }
 
     if (!getElementById(selectedElement?.id, elements)) {
@@ -366,15 +368,27 @@ export function AppContextProvider({ children }) {
         toolAction,
       },
     ],
-  ];
-
-  useEffect(() => {
+  ];  useEffect(() => {
     if (session) {
-      socket.on("setElements", (data) => {
-        setElements(data, true, false);
-      });
+      console.log("Setting up collaboration socket listeners for session:", session);
+      
+      // Set up socket listeners for collaboration
+      const handleSetElements = (data) => {
+        console.log("📥 Received setElements from collaboration:", data?.length || 0, "elements");
+        if (data && Array.isArray(data)) {
+          setElements(data, true, false);
+        }
+      };
+
+      socket.on("setElements", handleSetElements);
+      
+      // Cleanup listeners when session ends
+      return () => {
+        console.log("Cleaning up collaboration socket listeners");
+        socket.off("setElements", handleSetElements);
+      };
     }
-  }, [session]);
+  }, [session, setElements]);
   return (
     <AppContext.Provider
       value={{        action,

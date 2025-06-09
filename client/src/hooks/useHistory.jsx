@@ -1,9 +1,35 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { socket } from "../api/socket";
 
 export default function useHistory(initialState, session) {
   const [history, setHistory] = useState([initialState]);
   const [index, setIndex] = useState(0);
+  const lastEmitTime = useRef(0);
+  const pendingEmit = useRef(null);
+
+  // Debounced emit function to reduce excessive socket traffic during real-time collaboration
+  const debouncedEmit = useCallback((elements, room) => {
+    const now = performance.now();
+    const timeSinceLastEmit = now - lastEmitTime.current;
+    
+    // Clear any pending emit
+    if (pendingEmit.current) {
+      clearTimeout(pendingEmit.current);
+    }
+    
+    // If enough time has passed, emit immediately
+    if (timeSinceLastEmit >= 50) { // Allow up to 20 updates per second
+      lastEmitTime.current = now;
+      socket.emit("getElements", { elements, room });
+    } else {
+      // Otherwise, schedule a debounced emit
+      pendingEmit.current = setTimeout(() => {
+        lastEmitTime.current = performance.now();
+        socket.emit("getElements", { elements, room });
+        pendingEmit.current = null;
+      }, 50 - timeSinceLastEmit);
+    }
+  }, []);
 
   const setState = (action, overwrite = false, emit = true) => {
     const newState =
@@ -15,7 +41,7 @@ export default function useHistory(initialState, session) {
       setIndex(0);
 
       if (emit) {
-        socket.emit("getElements", { elements: newState, room: session });
+        debouncedEmit(newState, session);
       }
       return;
     }
