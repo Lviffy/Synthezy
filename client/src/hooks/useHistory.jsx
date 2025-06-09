@@ -46,5 +46,5 @@ export default function useHistory(initialState, session) {
       prevState < history.length - 1 ? prevState + 1 : prevState
     );
 
-  return [history[index], setState, undo, redo];
+  return [history[index], setState, undo, redo, history, index];
 }

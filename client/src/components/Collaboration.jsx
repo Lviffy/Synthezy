@@ -27,13 +27,22 @@ export default function Collaboration() {
     window.history.replaceState(null, null, "/");
   };
 
+  const handleShareClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Share button clicked");
+    setOpen(true);
+  };
+
   return (
     <div className="collaboration">
       <button
         data-users={users > 99 ? "99+" : users}
         type="button"
         className={"collaborateButton" + `${session ? " active" : ""}`}
-        onClick={() => setOpen(true)}
+        onClick={handleShareClick}
+        aria-label={session ? "Manage collaboration session" : "Start collaboration"}
+        title={session ? "Active collaboration session" : "Share and collaborate"}
       >
         Share
       </button>

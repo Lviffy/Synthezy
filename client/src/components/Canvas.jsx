@@ -11,14 +11,14 @@ export default function Canvas() {
     handleMouseMove,
     handleMouseUp,
     handleWheel,
+    handleContextMenu,
     textInputMode,
     setTextInputMode,
   } = useCanvas();
   const { style, scale, translate, scaleOffset, handleTouchStart, handleTouchMove, handleTouchEnd } = useAppContext();
 
   return (
-    <>
-      <canvas
+    <>      <canvas
         id="canvas"
         ref={canvasRef}
         width={dimension.width}
@@ -27,6 +27,7 @@ export default function Canvas() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

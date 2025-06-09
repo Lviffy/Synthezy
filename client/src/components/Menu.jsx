@@ -7,12 +7,22 @@ export default function Menu() {
   const { elements, setElements } = useAppContext();
   const [show, setShow] = useState(false);
 
+  const handleMenuToggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Menu button clicked");
+    setShow((prev) => !prev);
+  };
+
   return (
     <div className="menu">
       <button
         className="menuBtn"
         type="button"
-        onClick={() => setShow((prev) => !prev)}
+        onClick={handleMenuToggle}
+        aria-label={show ? "Close menu" : "Open menu"}
+        aria-expanded={show}
+        title="Menu"
       >
         {show ? <Xmark /> : <MenuIcon />}
       </button>
@@ -23,21 +33,38 @@ export default function Menu() {
 }
 
 function MenuBox({ elements, setElements, setShow }) {
-  const uploadJson = () => uploadElements(setElements);
-  const downloadJson = () => saveElements(elements);
-  const reset = () => setElements([]);
+  const uploadJson = () => {
+    console.log("Upload clicked");
+    uploadElements(setElements);
+  };
+  
+  const downloadJson = () => {
+    console.log("Download clicked");
+    saveElements(elements);
+  };
+  
+  const reset = () => {
+    console.log("Reset clicked");
+    setElements([]);
+  };
+
+  const handleMenuItemClick = (action, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+  };
 
   return (
     <>
       <div className="menuBlur" onClick={() => setShow(false)}></div>
       <section className="menuItems">
-        <button className="menuItem" type="button" onClick={uploadJson}>
+        <button className="menuItem" type="button" onClick={(e) => handleMenuItemClick(uploadJson, e)}>
           <Folder /> <span>Open</span>
         </button>
-        <button className="menuItem" type="button" onClick={downloadJson}>
+        <button className="menuItem" type="button" onClick={(e) => handleMenuItemClick(downloadJson, e)}>
           <Download /> <span>Save</span>
         </button>
-        <button className="menuItem" type="button" onClick={reset}>
+        <button className="menuItem" type="button" onClick={(e) => handleMenuItemClick(reset, e)}>
           <Delete /> <span>Reset the canvas</span>
         </button>
       </section>

@@ -62,6 +62,10 @@ export default function useCanvas() {  const {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    contextMenu,
+    setContextMenu,
+    currentMousePosition,
+    setCurrentMousePosition,
   } = useAppContext();
   const canvasRef = useRef(null);
   const lastUpdateTime = useRef(0);
@@ -71,7 +75,8 @@ export default function useCanvas() {  const {
   const [inCorner, setInCorner] = useState(false);
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));  const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
+  const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
   
   // Smooth translation state for hand tool
@@ -134,7 +139,66 @@ export default function useCanvas() {  const {
     clientX = (clientX - translate.x * scale + scaleOffset.x) / scale;
     clientY = (clientY - translate.y * scale + scaleOffset.y) / scale;
     return { clientX, clientY };
-  };  const handleMouseDown = (event) => {
+  };
+
+  const handleContextMenu = (event) => {
+    event.preventDefault(); // Prevent browser's default context menu
+    
+    const { clientX, clientY } = mousePosition(event);
+    setCurrentMousePosition({ x: clientX, y: clientY });
+    
+    // Close any existing context menu first
+    setContextMenu(null);
+    
+    // Use screen coordinates for menu positioning
+    const screenX = event.clientX;
+    const screenY = event.clientY;
+    
+    // Check if right-clicking on a selected element
+    const elementUnderCursor = elements.find(element => {
+      const { x1, y1, x2, y2 } = element;
+      const minX = Math.min(x1, x2);
+      const maxX = Math.max(x1, x2);
+      const minY = Math.min(y1, y2);
+      const maxY = Math.max(y1, y2);
+      
+      return clientX >= minX && clientX <= maxX && clientY >= minY && clientY <= maxY;
+    });
+    
+    let contextType = 'canvas';
+    
+    if (elementUnderCursor) {
+      // If we clicked on an element
+      if (selectedElements && selectedElements.length > 1 && selectedElements.some(el => el.id === elementUnderCursor.id)) {
+        contextType = 'multi';
+      } else {
+        contextType = 'single';
+        // Select the element if it's not already selected
+        if (!selectedElement || selectedElement.id !== elementUnderCursor.id) {
+          setSelectedElement(elementUnderCursor);
+          setSelectedElements([]);
+        }
+      }
+    } else if (selectedElement || (selectedElements && selectedElements.length > 0)) {
+      // If we clicked on empty space but have selections
+      if (selectedElements && selectedElements.length > 1) {
+        contextType = 'multi';
+      } else if (selectedElement) {
+        contextType = 'single';
+      }
+    }
+    
+    // Show context menu with a small delay to ensure proper positioning
+    setTimeout(() => {
+      setContextMenu({
+        x: screenX,
+        y: screenY,
+        type: contextType
+      });
+    }, 10);
+  };
+
+  const handleMouseDown = (event) => {
     const { clientX, clientY } = mousePosition(event);
     setCurrentMousePosition({ x: clientX, y: clientY });
     
@@ -977,13 +1041,13 @@ export default function useCanvas() {  const {
     return () => {
       window.removeEventListener("wheel", preventBrowserZoom);
     };
-  }, []);
-  return {
+  }, []);  return {
     canvasRef,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
     handleWheel,
+    handleContextMenu,
     dimension,
     textInputMode,
     setTextInputMode,

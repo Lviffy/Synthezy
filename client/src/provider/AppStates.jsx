@@ -37,8 +37,7 @@ export function AppContextProvider({ children }) {
   const [session, setSession] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedElements, setSelectedElements] = useState([]);
-  const [selectionBounds, setSelectionBounds] = useState(null);
-  const [elements, setElements, undo, redo] = useHistory(
+  const [selectionBounds, setSelectionBounds] = useState(null);  const [elements, setElements, undo, redo, history, historyIndex] = useHistory(
     initialElements,
     session
   );
@@ -61,6 +60,11 @@ export function AppContextProvider({ children }) {
   });  const [showGrid, setShowGrid] = useState(true);
   const [textInputMode, setTextInputMode] = useState(null);
   const [isZooming, setIsZooming] = useState(false);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState(null);
+  const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });
+  
   // Zoom configuration
   const ZOOM_LIMITS = {
     min: 0.05,
@@ -398,14 +402,19 @@ export function AppContextProvider({ children }) {
         selectedElements,
         setSelectedElements,
         selectionBounds,
-        setSelectionBounds,
-        undo,
+        setSelectionBounds,        undo,
         redo,
+        history,
+        historyIndex,
         session,        setSession,
         showGrid,
         setShowGrid,
         textInputMode,
         setTextInputMode,
+        contextMenu,
+        setContextMenu,
+        currentMousePosition,
+        setCurrentMousePosition,
         handleTouchStart,
         handleTouchMove,
         handleTouchEnd,

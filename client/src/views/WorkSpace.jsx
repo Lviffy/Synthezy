@@ -4,6 +4,7 @@ import Grid from "../components/Grid";
 import SelectionRectangle from "../components/SelectionRectangle";
 import Ui from "../components/Ui";
 import TextInput from "../components/TextInput";
+import ContextMenu from "../components/ContextMenu";
 import { useSearchParams } from "react-router-dom";
 import { useAppContext } from "../provider/AppStates";
 import { socket } from "../api/socket";
@@ -20,13 +21,13 @@ export default function WorkSpace() {
       socket.emit("join", room);
     }
   }, [searchParams]);
-
   return (
     <>
       <Grid />
       <Ui />
       <Canvas />
       <SelectionRectangle />
+      <ContextMenu />
     </>
   );
 }

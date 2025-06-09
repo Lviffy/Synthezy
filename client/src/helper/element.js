@@ -662,26 +662,45 @@ export function copyElements(selectedElements) {
     id: undefined
   }));
   
+  // Store in localStorage for persistence across sessions
+  try {
+    localStorage.setItem('clipboardData', JSON.stringify(clipboardData));
+  } catch (error) {
+    console.warn('Failed to store clipboard data:', error);
+  }
+  
   return true;
 }
 
 export function pasteElements(setState, setSelectedElements, setSelectedElement, positionOrOffset = { x: 20, y: 20 }) {
-  if (!clipboardData || clipboardData.length === 0) return false;
+  // Try to get clipboard data from memory or localStorage
+  let dataToUse = clipboardData;
+  if (!dataToUse || dataToUse.length === 0) {
+    try {
+      const stored = localStorage.getItem('clipboardData');
+      if (stored) {
+        dataToUse = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.warn('Failed to parse clipboard data from localStorage:', error);
+    }
+  }
+  
+  if (!dataToUse || dataToUse.length === 0) return false;
   
   const pastedElements = [];
   
   setState((prevState) => {
     const newElements = [...prevState];
-    
-    // Determine if we're using position-based or offset-based pasting
+      // Determine if we're using position-based or offset-based pasting
     const isPositionBased = positionOrOffset && (positionOrOffset.x > 100 || positionOrOffset.y > 100);
     
     // Calculate the bounds of the copied elements to center them at cursor
     let bounds = null;
-    if (isPositionBased && clipboardData.length > 0) {
+    if (isPositionBased && dataToUse.length > 0) {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       
-      clipboardData.forEach(element => {
+      dataToUse.forEach(element => {
         minX = Math.min(minX, element.x1, element.x2);
         minY = Math.min(minY, element.y1, element.y2);
         maxX = Math.max(maxX, element.x1, element.x2);
@@ -694,7 +713,7 @@ export function pasteElements(setState, setSelectedElements, setSelectedElement,
       };
     }
     
-    clipboardData.forEach((element) => {
+    dataToUse.forEach((element) => {
       let offsetX, offsetY;
       
       if (isPositionBased) {
