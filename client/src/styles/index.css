@@ -67,12 +67,82 @@ main.ui footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
 }
 
-main.ui footer > div {
+main.ui footer::before {
+  display: none;
+}
+
+main.ui footer:hover::before {
+  display: none;
+}
+
+main.ui footer > * {
+  position: relative;
+}
+
+/* Footer left container for zoom and undo/redo */
+.footer-left {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.footer-left:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Remove individual backgrounds from zoom and undo/redo when in footer-left */
+.footer-left .zoomOptions,
+.footer-left .undoRedo {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 4px 8px;
+}
+
+.footer-left .zoomOptions:hover,
+.footer-left .undoRedo:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  box-shadow: none;
+  transform: none;
+  border-radius: 12px;
+}
+
+/* Add a subtle separator between zoom and undo/redo */
+.footer-left .zoomOptions::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.1) 50%, transparent 80%);
+  width: 1px;
+  height: 24px;
+  border-radius: 0.5px;
 }
 
 section {
@@ -283,46 +353,253 @@ section.toolbar .toolbutton:hover .tool-number {
 
 section.zoomOptions {
   display: flex;
-  gap: 5px;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+section.zoomOptions:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 section.zoomOptions .zoom {
   display: grid;
   place-content: center;
-  color: var(--primary-color);
-
-  width: 30px;
-  height: 30px;
-
-  background: none;
-  border: none;
-  border-radius: 6px;
+  color: #4a5568;
+  width: 36px;
+  height: 36px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
   cursor: pointer;
   font-size: 1.1em;
   font-weight: 700;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+section.zoomOptions .zoom::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 section.zoomOptions .zoom:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.04);
+  color: #2d3748;
+}
+
+section.zoomOptions .zoom:hover::before {
+  opacity: 1;
 }
 
 section.zoomOptions .zoom:active {
-  transform: scale(0.95);
-  background-color: rgba(0, 0, 0, 0.1);
+  transform: scale(0.98);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 section.zoomOptions .zoom.text {
   width: fit-content;
-  width: 4em !important;
-  font-size: 15px;
+  min-width: 64px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #2d3748;
+  letter-spacing: 0.02em;
+}
+
+section.zoomOptions .zoom.text:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 section.zoomOptions .zoom.fit {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
+  background: linear-gradient(135deg, rgba(74, 85, 104, 0.1), rgba(74, 85, 104, 0.05));
+  border: 1px solid rgba(74, 85, 104, 0.15);
+  color: #4a5568;
+}
+
+section.zoomOptions .zoom.fit:hover {
+  background: linear-gradient(135deg, rgba(74, 85, 104, 0.15), rgba(74, 85, 104, 0.08));
+  border-color: rgba(74, 85, 104, 0.25);
+  color: #2d3748;
+}
+
+/* Grid toggle active state */
+section.zoomOptions .zoom.grid-toggle.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  box-shadow: 
+    0 4px 12px rgba(59, 130, 246, 0.08),
+    0 2px 6px rgba(59, 130, 246, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+section.zoomOptions .zoom.grid-toggle.active:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #2563eb;
+}
+
+/* Zoom animation for zoom percentage */
+@keyframes zoomPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+section.zoomOptions .zoom.text:active {
+  animation: zoomPulse 0.3s ease-out;
+}
+
+/* Add separator between zoom controls and undo/redo */
+
+/* Enhanced focus states for accessibility */
+section.zoomOptions .zoom:focus-visible,
+section.undoRedo > button:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+  z-index: 10;
+}
+
+/* Success state for undo/redo when action is performed */
+@keyframes actionSuccess {
+  0% {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    background: rgba(248, 250, 252, 0.8);
+    border-color: rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* Credits section styling */
+section.credits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+section.credits:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+section.credits a {
+  display: grid;
+  place-content: center;
+  color: #4a5568;
+  width: 36px;
+  height: 36px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+section.credits a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+section.credits a:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.04);
+  color: #2d3748;
+}
+
+section.credits a:hover::before {
+  opacity: 1;
+}
+
+section.credits a:active {
+  transform: scale(0.98);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+section.credits a:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
+/* Icon styling for credits */
+section.credits a svg {
+  transition: transform 0.2s ease;
+}
+
+section.credits a:hover svg {
+  transform: scale(1.1);
+}
+
+section.credits a:active svg {
+  transform: scale(0.95);
 }
 
 section.styleOptions {
@@ -405,33 +682,99 @@ section.undoRedo {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+section.undoRedo:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 section.undoRedo > button {
   display: grid;
   place-content: center;
-  color: var(--primary-color);
-
-  width: 30px;
-  height: 30px;
-
-  background: none;
-  border: none;
-  border-radius: 6px;
+  color: #4a5568;
+  width: 36px;
+  height: 36px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+section.undoRedo > button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 section.undoRedo > button:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.04);
+  color: #2d3748;
+}
+
+section.undoRedo > button:hover::before {
+  opacity: 1;
 }
 
 section.undoRedo > button:active {
+  transform: scale(0.98);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+section.undoRedo > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+section.undoRedo > button:disabled:hover {
+  background: rgba(248, 250, 252, 0.8);
+  border-color: rgba(0, 0, 0, 0.06);
+  transform: none;
+  box-shadow: none;
+  color: #4a5568;
+}
+
+/* Icon styling for undo/redo buttons */
+section.undoRedo > button svg {
+  transition: transform 0.2s ease;
+}
+
+section.undoRedo > button:hover svg {
+  transform: scale(1.1);
+}
+
+section.undoRedo > button:active svg {
   transform: scale(0.95);
-  background-color: rgba(0, 0, 0, 0.1);
 }
 
 div.menu {
@@ -993,6 +1336,31 @@ section.toolbar > div:hover::before {
   section.toolbar > div {
     --gap: 4px;
   }
+
+  /* Improve mobile footer layout */
+  main.ui footer {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .footer-left {
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* Make zoom and undo/redo buttons slightly smaller on mobile */
+  section.zoomOptions .zoom,
+  section.undoRedo > button {
+    width: 32px;
+    height: 32px;
+  }
+
+  section.zoomOptions .zoom.text {
+    min-width: 56px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1004,5 +1372,33 @@ section.toolbar > div:hover::before {
   section.toolbar .toolbutton {
     width: 28px;
     height: 28px;
+  }
+
+  /* Further optimize for very small screens */
+  main.ui footer {
+    padding: 8px;
+  }
+
+  section.zoomOptions,
+  section.undoRedo {
+    padding: 4px;
+    gap: 2px;
+  }
+
+  section.zoomOptions .zoom,
+  section.undoRedo > button {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  section.zoomOptions .zoom.text {
+    min-width: 48px;
+    font-size: 11px;
+    padding: 0 6px;
+  }
+
+  section.zoomOptions .zoom.fit {
+    font-size: 16px;
   }
 }

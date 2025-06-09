@@ -18,17 +18,12 @@ export default function Ui() {
         <Collaboration />
       </header>
       {(!["selection", "hand"].includes(selectedTool) || selectedElement || (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0)) && (
-        <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />
-      )}
-
-      <footer>
-        <div>
+        <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />      )}      <footer>
+        <div className="footer-left">
           <Zoom />
           <UndoRedo />
         </div>
-        <div>
-          <Credits />
-        </div>
+        <Credits />
       </footer>
     </main>
   );

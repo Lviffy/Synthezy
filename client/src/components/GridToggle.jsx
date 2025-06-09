@@ -6,16 +6,11 @@ export default function GridToggle() {
   const toggleGrid = () => {
     setShowGrid(!showGrid);
   };
-
   return (
     <button
-      className="zoom"
+      className={`zoom grid-toggle ${showGrid ? 'active' : ''}`}
       onClick={toggleGrid}
       title={showGrid ? "Hide Grid" : "Show Grid"}
-      style={{
-        background: showGrid ? '#e0dfffd5' : 'none',
-        color: showGrid ? '#030064' : 'var(--primary-color)',
-      }}
     >
       <svg
         width="16"
