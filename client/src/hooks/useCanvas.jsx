@@ -71,9 +71,13 @@ export default function useCanvas() {  const {
   const [inCorner, setInCorner] = useState(false);
   const [padding, setPadding] = useState(minmax(10 / scale, [0.5, 50]));  const [cursor, setCursor] = useState("default");
   const [mouseAction, setMouseAction] = useState({ x: 0, y: 0 });
-  const [initialSelectedElements, setInitialSelectedElements] = useState([]);
-  const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });const [resizeOldDementions, setResizeOldDementions] = useState(null)
+  const [initialSelectedElements, setInitialSelectedElements] = useState([]);  const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
+  
+  // Smooth translation state for hand tool
+  const [smoothTranslate, setSmoothTranslate] = useState({ x: 0, y: 0 });
+  const translateAnimationRef = useRef(null);
+  const lastTranslateUpdate = useRef(0);
     // Helper function to get tool by number (1-12)
   const getToolByNumber = (number) => {
     let toolCounter = 0;
@@ -437,17 +441,31 @@ export default function useCanvas() {  const {
             true
           );
         }
+      }    } else if (action == "translate") {
+      const now = performance.now();
+      
+      // Throttle translate updates to 60fps for smooth dragging
+      if (now - lastTranslateUpdate.current < 16) {
+        return;
       }
-    } else if (action == "translate") {
+      lastTranslateUpdate.current = now;
+      
       const x = clientX - translate.sx;
       const y = clientY - translate.sy;
 
-      setTranslate((prevState) => ({
-        ...prevState,
-        x: prevState.x + x,
-        y: prevState.y + y,
-      }));
-    } else if (action.startsWith("resize")) {
+      // Use requestAnimationFrame for smooth translate updates
+      if (translateAnimationRef.current) {
+        cancelAnimationFrame(translateAnimationRef.current);
+      }
+      
+      translateAnimationRef.current = requestAnimationFrame(() => {
+        setTranslate((prevState) => ({
+          ...prevState,
+          x: prevState.x + x,
+          y: prevState.y + y,
+        }));
+      });
+    }else if (action.startsWith("resize")) {
       const resizeCorner = action.slice(7, 9);
       const resizeType = action.slice(10) || "default";
       const s_element = getElementById(selectedElement.id, elements);
