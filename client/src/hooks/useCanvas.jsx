@@ -619,33 +619,29 @@ export default function useCanvas() {  const {
           const maxX = Math.max(...xCoords);
           const minY = Math.min(...yCoords);
           const maxY = Math.max(...yCoords);
-          
-          updateElement(
+            updateElement(
             lastElement.id,
             { x1: minX, y1: minY, x2: maxX, y2: maxY },
             setElements,
             elements,
-            true
+            false
           );
-        }
-      } else {
+        }      } else {
         // Regular shape drawing
         const lastElement = elements.at(-1);
         const { id, x1, y1, x2, y2 } = adjustCoordinates(lastElement);
-        updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
+        updateElement(id, { x1, x2, y1, y2 }, setElements, elements, false);
       }
       
       if (!lockTool) {
         setSelectedTool("selection");
         setSelectedElement(elements.at(-1));
       }
-    }
-
-    if (currentAction.startsWith("resize")) {
+    }    if (currentAction.startsWith("resize")) {
       const { id, x1, y1, x2, y2 } = adjustCoordinates(
         getElementById(selectedElement.id, elements)
       );
-      updateElement(id, { x1, x2, y1, y2 }, setElements, elements, true);
+      updateElement(id, { x1, x2, y1, y2 }, setElements, elements, false);
     }
   };  // Momentum scrolling state
   const [momentum, setMomentum] = useState({ x: 0, y: 0 });

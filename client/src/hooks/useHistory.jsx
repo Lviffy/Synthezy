@@ -35,21 +35,19 @@ export default function useHistory(initialState, session) {
     const newState =
       typeof action === "function" ? action(history[index]) : action;
 
-    if (session) {
-      if (action == "prevState") return;
-      setHistory([newState]);
-      setIndex(0);
-
-      if (emit) {
-        debouncedEmit(newState, session);
-      }
-      return;
-    }
+    console.log('useHistory setState called:', { 
+      action: typeof action === 'function' ? 'function' : action, 
+      overwrite, 
+      emit, 
+      currentIndex: index, 
+      historyLength: history.length 
+    });
 
     if (action == "prevState") {
       const updatedState = [...history].slice(0, index + 1);
       setHistory([...updatedState, history[index - 1]]);
       setIndex((prevState) => prevState - 1);
+      console.log('prevState action executed');
       return;
     }
 
@@ -57,20 +55,38 @@ export default function useHistory(initialState, session) {
       const historyCopy = [...history];
       historyCopy[index] = newState;
       setHistory(historyCopy);
+      console.log('Overwrite executed - no new history entry');
     } else {
       const updatedState = [...history].slice(0, index + 1);
       setHistory([...updatedState, newState]);
       setIndex((prevState) => prevState + 1);
+      console.log('New history entry created. New index will be:', index + 1);
+    }
+
+    // Handle collaboration sync after updating local history
+    if (session && emit) {
+      debouncedEmit(newState, session);
+      console.log('Collaboration sync triggered');
     }
   };
 
-  const undo = () =>
-    setIndex((prevState) => (prevState > 0 ? prevState - 1 : prevState));
+  const undo = () => {
+    console.log('undo() called - before:', { index, historyLength: history.length });
+    setIndex((prevState) => {
+      const newIndex = prevState > 0 ? prevState - 1 : prevState;
+      console.log('undo() - index change:', prevState, '->', newIndex);
+      return newIndex;
+    });
+  };
 
-  const redo = () =>
-    setIndex((prevState) =>
-      prevState < history.length - 1 ? prevState + 1 : prevState
-    );
+  const redo = () => {
+    console.log('redo() called - before:', { index, historyLength: history.length });
+    setIndex((prevState) => {
+      const newIndex = prevState < history.length - 1 ? prevState + 1 : prevState;
+      console.log('redo() - index change:', prevState, '->', newIndex);
+      return newIndex;
+    });
+  };
 
   return [history[index], setState, undo, redo, history, index];
 }
