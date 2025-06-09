@@ -90,10 +90,8 @@ export default function useCanvas() {  const {
 
   // Test function to verify tools array
   const testTools = () => {
-    console.log('Available tools:', tools);
     for (let i = 1; i <= 12; i++) {
       const tool = getToolByNumber(i);
-      console.log(`Tool ${i}:`, tool ? tool.slug : 'not found');
     }
   };
 
@@ -719,8 +717,6 @@ export default function useCanvas() {  const {
       if (!ctrlKey && !metaKey && !shiftKey) {
         let toolNumber = null;
         
-        console.log('Key pressed:', key); // Debug log
-        
         if (key >= '1' && key <= '9') {
           toolNumber = parseInt(key);
         } else if (key === '0') {
@@ -732,13 +728,10 @@ export default function useCanvas() {  const {
         }
         
         if (toolNumber) {
-          console.log('Looking for tool number:', toolNumber); // Debug log
           const tool = getToolByNumber(toolNumber);
-          console.log('Found tool:', tool); // Debug log
           
           if (tool) {
             prevent();
-            console.log(`Selecting tool ${toolNumber}: ${tool.slug}`); // Debug log
             tool.toolAction(tool.slug);
             return;
           } else {

@@ -45,6 +45,4 @@ app.get("/", (req, res) => {
   );
 });
 
-server.listen(PORT, () => {
-  console.log("Listen in port : " + PORT);
-});
+server.listen(PORT, () => {});
