@@ -15,13 +15,17 @@ import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets
 
 export default function Style({ selectedElement, selectedElements = [] }) {
   const { elements, setElements, setSelectedElement, setSelectedElements, setStyle } =
-    useAppContext();
-  const [elementStyle, setElementStyle] = useState({
+    useAppContext();  const [elementStyle, setElementStyle] = useState({
     fill: selectedElement?.fill,
     strokeWidth: selectedElement?.strokeWidth,
     strokeStyle: selectedElement?.strokeStyle,
     strokeColor: selectedElement?.strokeColor,
     opacity: selectedElement?.opacity,
+    // Sticky note specific properties
+    title: selectedElement?.title,
+    content: selectedElement?.content,
+    noteColor: selectedElement?.noteColor,
+    textColor: selectedElement?.textColor,
   });
 
   useEffect(() => {
@@ -31,6 +35,11 @@ export default function Style({ selectedElement, selectedElements = [] }) {
       strokeStyle: selectedElement?.strokeStyle,
       strokeColor: selectedElement?.strokeColor,
       opacity: selectedElement?.opacity,
+      // Sticky note specific properties
+      title: selectedElement?.title,
+      content: selectedElement?.content,
+      noteColor: selectedElement?.noteColor,
+      textColor: selectedElement?.textColor,
     });
   }, [selectedElement]);
 
@@ -61,203 +70,361 @@ export default function Style({ selectedElement, selectedElements = [] }) {
             Bulk editing {selectedElements?.length || 0} elements
           </p>
         )}
-      </div>
+      </div>      {/* Scrollable Content */}
+      <div className="properties-content">        {/* Appearance Section - Hidden for sticky notes */}
+        {selectedElement?.tool !== "stickyNote" && (
+          <div className="properties-section">
+            {/* Stroke Color */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Stroke Color</span>
+              </label>
+              <div className="color-palette">
+                {STROKE_COLORS.map((color, index) => (
+                  <button
+                    type="button"
+                    title={color}
+                    style={{ "--color": color }}
+                    key={index}
+                    className={
+                      "color-swatch" +
+                      (color === elementStyle.strokeColor ? " selected" : "")
+                    }
+                    onClick={() => {
+                      setStylesStates({ strokeColor: color });
+                      if (isMultiSelection) {
+                        updateMultipleElements(
+                          selectedElements,
+                          { strokeColor: color },
+                          setElements,
+                          elements
+                        );
+                      } else {
+                        updateElement(
+                          selectedElement.id,
+                          { strokeColor: color },
+                          setElements,
+                          elements
+                        );
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
 
-      {/* Scrollable Content */}
-      <div className="properties-content">        {/* Appearance Section */}
-        <div className="properties-section">
-          {/* Stroke Color */}
-          <div className="property-group">
-            <label className="property-label">
-              <span>Stroke Color</span>
-            </label>
-            <div className="color-palette">
-              {STROKE_COLORS.map((color, index) => (
-                <button
-                  type="button"
-                  title={color}
-                  style={{ "--color": color }}
-                  key={index}
-                  className={
-                    "color-swatch" +
-                    (color === elementStyle.strokeColor ? " selected" : "")
-                  }
-                  onClick={() => {
-                    setStylesStates({ strokeColor: color });
+            {/* Background Color */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Fill Color</span>
+              </label>
+              <div className="color-palette">
+                {BACKGROUND_COLORS.map((fill, index) => (
+                  <button
+                    type="button"
+                    title={fill}
+                    className={
+                      "color-swatch" +
+                      (fill === elementStyle.fill ? " selected" : "")
+                    }
+                    style={{ "--color": fill }}
+                    key={index}
+                    onClick={() => {
+                      setStylesStates({ fill });
+                      if (isMultiSelection) {
+                        updateMultipleElements(
+                          selectedElements,
+                          { fill },
+                          setElements,
+                          elements
+                        );
+                      } else {
+                        updateElement(
+                          selectedElement.id,
+                          { fill },
+                          setElements,
+                          elements
+                        );
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Stroke Width */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Stroke Width</span>
+                <span className="property-value">{elementStyle.strokeWidth}px</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  className="property-slider"
+                  min={0}
+                  max={20}
+                  value={elementStyle.strokeWidth}
+                  step="1"
+                  onChange={({ target }) => {
+                    const strokeWidth = minmax(+target.value, [0, 20]);
+                    setStylesStates({ strokeWidth });
                     if (isMultiSelection) {
                       updateMultipleElements(
                         selectedElements,
-                        { strokeColor: color },
+                        { strokeWidth },
                         setElements,
                         elements
                       );
                     } else {
                       updateElement(
                         selectedElement.id,
-                        { strokeColor: color },
+                        { strokeWidth },
                         setElements,
                         elements
                       );
                     }
                   }}
                 />
-              ))}
+              </div>
             </div>
-          </div>
 
-          {/* Background Color */}
-          <div className="property-group">
-            <label className="property-label">
-              <span>Fill Color</span>
-            </label>
-            <div className="color-palette">
-              {BACKGROUND_COLORS.map((fill, index) => (
-                <button
-                  type="button"
-                  title={fill}
-                  className={
-                    "color-swatch" +
-                    (fill === elementStyle.fill ? " selected" : "")
-                  }
-                  style={{ "--color": fill }}
-                  key={index}
-                  onClick={() => {
-                    setStylesStates({ fill });
+            {/* Stroke Style */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Stroke Style</span>
+              </label>
+              <div className="button-group">
+                {STROKE_STYLES.map((style, index) => (
+                  <button
+                    type="button"
+                    title={style.slug}
+                    className={
+                      "style-button" +
+                      (style.slug === elementStyle.strokeStyle ? " selected" : "")
+                    }
+                    key={index}
+                    onClick={() => {
+                      setStylesStates({ strokeStyle: style.slug });
+                      if (isMultiSelection) {
+                        updateMultipleElements(
+                          selectedElements,
+                          { strokeStyle: style.slug },
+                          setElements,
+                          elements
+                        );
+                      } else {
+                        updateElement(
+                          selectedElement.id,
+                          { strokeStyle: style.slug },
+                          setElements,
+                          elements
+                        );
+                      }
+                    }}
+                  >
+                    <style.icon />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Opacity */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Opacity</span>
+                <span className="property-value">{elementStyle.opacity}%</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  className="property-slider"
+                  value={elementStyle.opacity}
+                  step="10"
+                  onChange={({ target }) => {
+                    const opacity = minmax(+target.value, [0, 100]);
+                    setStylesStates({ opacity });
                     if (isMultiSelection) {
                       updateMultipleElements(
                         selectedElements,
-                        { fill },
+                        { opacity },
                         setElements,
                         elements
                       );
                     } else {
                       updateElement(
                         selectedElement.id,
-                        { fill },
+                        { opacity },
                         setElements,
                         elements
                       );
                     }
                   }}
                 />
-              ))}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Stroke Width */}
-          <div className="property-group">
-            <label className="property-label">
-              <span>Stroke Width</span>
-              <span className="property-value">{elementStyle.strokeWidth}px</span>
-            </label>
-            <div className="slider-container">
+        {/* Sticky Note Section - Only for sticky note elements */}
+        {selectedElement?.tool === "stickyNote" && !isMultiSelection && (
+          <div className="properties-section">
+            <h4 className="section-title">Sticky Note</h4>
+            
+            {/* Title Input */}            <div className="property-group">
+              <label className="property-label">
+                <span>Title (Optional)</span>
+              </label>
               <input
-                type="range"
-                className="property-slider"
-                min={0}
-                max={20}
-                value={elementStyle.strokeWidth}
-                step="1"
-                onChange={({ target }) => {
-                  const strokeWidth = minmax(+target.value, [0, 20]);
-                  setStylesStates({ strokeWidth });
-                  if (isMultiSelection) {
-                    updateMultipleElements(
-                      selectedElements,
-                      { strokeWidth },
-                      setElements,
-                      elements
-                    );
-                  } else {
-                    updateElement(
-                      selectedElement.id,
-                      { strokeWidth },
-                      setElements,
-                      elements
-                    );
+                type="text"
+                value={elementStyle.title || ""}                onChange={(e) => {
+                  const title = e.target.value;
+                  setElementStyle(prev => ({ ...prev, title }));
+                  updateElement(
+                    selectedElement.id,
+                    { title },
+                    setElements,
+                    elements
+                  );
+                  
+                  // Trigger auto-resize for sticky notes
+                  if (selectedElement.tool === "stickyNote") {
+                    // Force re-render to trigger auto-resize
+                    setTimeout(() => {
+                      // The re-render will trigger auto-resize in the canvas
+                    }, 0);
                   }
+                }}
+                placeholder="Enter title..."
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  fontFamily: "inherit"
+                }}
+              />
+            </div>            {/* Content Textarea */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Content</span>
+              </label>
+              <textarea
+                value={elementStyle.content || ""}                onChange={(e) => {
+                  const content = e.target.value;
+                  setElementStyle(prev => ({ ...prev, content }));
+                  updateElement(
+                    selectedElement.id,
+                    { content },
+                    setElements,
+                    elements
+                  );
+                  
+                  // Trigger auto-resize for sticky notes
+                  if (selectedElement.tool === "stickyNote") {
+                    // Force re-render to trigger auto-resize
+                    setTimeout(() => {
+                      // The re-render will trigger auto-resize in the canvas
+                    }, 0);
+                  }
+                }}                onKeyDown={(e) => {
+                  // Allow both Enter and Shift+Enter for new lines
+                  // No need to prevent default Enter behavior for new lines
+                }}
+                placeholder="Enter content... (Enter or Shift+Enter for new lines)"
+                rows={3}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  minHeight: "60px",
+                  lineHeight: "1.4"
                 }}
               />
             </div>
-          </div>
 
-          {/* Stroke Style */}
-          <div className="property-group">
-            <label className="property-label">
-              <span>Stroke Style</span>
-            </label>
-            <div className="button-group">
-              {STROKE_STYLES.map((style, index) => (
-                <button
-                  type="button"
-                  title={style.slug}
-                  className={
-                    "style-button" +
-                    (style.slug === elementStyle.strokeStyle ? " selected" : "")
-                  }
-                  key={index}
-                  onClick={() => {
-                    setStylesStates({ strokeStyle: style.slug });
-                    if (isMultiSelection) {
-                      updateMultipleElements(
-                        selectedElements,
-                        { strokeStyle: style.slug },
-                        setElements,
-                        elements
-                      );
-                    } else {
+            {/* Note Color */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Note Color</span>
+              </label>
+              <div className="color-palette">
+                {[
+                  { name: "Yellow", color: "#fff3a0" },
+                  { name: "Pink", color: "#ffb3d9" },
+                  { name: "Blue", color: "#a0d8ff" },
+                  { name: "Green", color: "#b3ffb3" },
+                  { name: "Orange", color: "#ffcc99" },
+                  { name: "Purple", color: "#d9b3ff" },
+                ].map((colorOption, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    title={colorOption.name}
+                    style={{ "--color": colorOption.color }}
+                    className={
+                      "color-swatch" +
+                      (colorOption.color === elementStyle.noteColor ? " selected" : "")
+                    }
+                    onClick={() => {
+                      const noteColor = colorOption.color;
+                      setElementStyle(prev => ({ ...prev, noteColor }));
                       updateElement(
                         selectedElement.id,
-                        { strokeStyle: style.slug },
+                        { noteColor, fill: noteColor },
                         setElements,
                         elements
                       );
-                    }
-                  }}
-                >
-                  <style.icon />
-                </button>
-              ))}
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Opacity */}
-          <div className="property-group">
-            <label className="property-label">
-              <span>Opacity</span>
-              <span className="property-value">{elementStyle.opacity}%</span>
-            </label>
-            <div className="slider-container">
-              <input
-                type="range"
-                min={0}
-                max={100}
-                className="property-slider"
-                value={elementStyle.opacity}
-                step="10"
-                onChange={({ target }) => {
-                  const opacity = minmax(+target.value, [0, 100]);
-                  setStylesStates({ opacity });
-                  if (isMultiSelection) {
-                    updateMultipleElements(
-                      selectedElements,
-                      { opacity },
-                      setElements,
-                      elements
-                    );
-                  } else {
-                    updateElement(
-                      selectedElement.id,
-                      { opacity },
-                      setElements,
-                      elements
-                    );
-                  }
-                }}
-              />
+            {/* Text Color */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Text Color</span>
+              </label>
+              <div className="color-palette">
+                {[
+                  "#000000", "#333333", "#666666", "#999999", 
+                  "#2563eb", "#dc2626", "#16a34a", "#ca8a04"
+                ].map((color, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    title={color}
+                    style={{ "--color": color }}
+                    className={
+                      "color-swatch" +
+                      (color === elementStyle.textColor ? " selected" : "")
+                    }
+                    onClick={() => {
+                      const textColor = color;
+                      setElementStyle(prev => ({ ...prev, textColor }));
+                      updateElement(
+                        selectedElement.id,
+                        { textColor, strokeColor: textColor },
+                        setElements,
+                        elements
+                      );
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>        {/* Layers Section - Only for single selection */}
+        )}
+
+        {/* Layers Section - Only for single selection */}
         {selectedElement?.id && !isMultiSelection && (
           <div className="properties-section">
             <div className="property-group">

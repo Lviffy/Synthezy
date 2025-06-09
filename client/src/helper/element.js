@@ -43,14 +43,21 @@ export function isWithinElement(x, y, element) {
       const minY = Math.min(y1, y2) - strokeWidth / 2;
       const maxY = Math.max(y1, y2) + strokeWidth / 2;
       return x >= minX && x <= maxX && y >= minY && y <= maxY;
-      
-    case "image":
+        case "image":
       // Image elements use bounding box detection
       const imgMinX = Math.min(x1, x2);
       const imgMaxX = Math.max(x1, x2);
       const imgMinY = Math.min(y1, y2);
       const imgMaxY = Math.max(y1, y2);
       return x >= imgMinX && x <= imgMaxX && y >= imgMinY && y <= imgMaxY;
+      
+    case "stickyNote":
+      // Sticky note elements use bounding box detection
+      const noteMinX = Math.min(x1, x2);
+      const noteMaxX = Math.max(x1, x2);
+      const noteMinY = Math.min(y1, y2);
+      const noteMaxY = Math.max(y1, y2);
+      return x >= noteMinX && x <= noteMaxX && y >= noteMinY && y <= noteMaxY;
       
     case "circle":
       const width = x2 - x1 + strokeWidth;
@@ -102,6 +109,17 @@ export function createElement(x1, y1, x2, y2, style, tool) {
   
   if (tool === "image") {
     return { ...baseElement, imageData: null, imageUrl: null };
+  }
+  
+  if (tool === "stickyNote") {
+    return { 
+      ...baseElement, 
+      title: "", 
+      content: "", 
+      noteColor: "#fef3c7", // Default yellow note color
+      textColor: "#451a03", // Default dark brown text
+      opacity: 0.85 // Default translucent opacity
+    };
   }
   
   return baseElement;

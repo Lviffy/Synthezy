@@ -99,8 +99,7 @@ export const shapes = {
       const textOptions = { ...options, strokeLineDash: [5, 5] };
       roughCanvas.rectangle(minX, minY, Math.max(width, 20), Math.max(height, 20), textOptions);
     }
-  },
-  image: (x1, y1, x2, y2, roughCanvas, options, element) => {
+  },  image: (x1, y1, x2, y2, roughCanvas, options, element) => {
     const width = Math.abs(x2 - x1);
     const height = Math.abs(y2 - y1);
     const minX = Math.min(x1, x2);
@@ -119,6 +118,19 @@ export const shapes = {
       roughCanvas.line(maxX, minY, minX, maxY, options);
     }
     // If imageData exists, it will be rendered separately in the draw function
+  },
+  stickyNote: (x1, y1, x2, y2, roughCanvas, options, element) => {
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+    const minX = Math.min(x1, x2);
+    const minY = Math.min(y1, y2);
+      // Don't draw rough border for sticky notes - they'll be rendered with custom styling
+    // The note content will be rendered separately in the draw function
+    if (!element?.title?.trim() && !element?.content?.trim()) {
+      // Only show dashed rectangle during creation when both title and content are empty
+      const noteOptions = { ...options, strokeLineDash: [5, 5] };
+      roughCanvas.rectangle(minX, minY, Math.max(width, 150), Math.max(height, 100), noteOptions);
+    }
   },
 };
 
@@ -409,8 +421,7 @@ export function draw(element, context) {
       context.restore();
     }
   }
-  
-  if (tool === "image" && element.imageData) {
+    if (tool === "image" && element.imageData) {
     // Render actual image with caching to prevent flickering
     let cachedImage = imageCache.get(element.imageData);
     
@@ -429,17 +440,127 @@ export function draw(element, context) {
     }
     // Note: If image is still loading, it will appear on the next redraw
   }
+  if (tool === "stickyNote") {
+    // Render sticky note with custom styling
+    context.save();
+    try {
+      const width = Math.abs(x2 - x1);
+      const height = Math.abs(y2 - y1);
+      const minX = Math.min(x1, x2);
+      const minY = Math.min(y1, y2);
+      
+      // Set note opacity
+      const noteOpacity = element.opacity || 0.85;
+      
+      // Draw note background with corner fold effect
+      context.globalAlpha = noteOpacity;
+      
+      // Main note rectangle
+      context.fillStyle = element.noteColor || "#fef3c7";
+      context.fillRect(minX, minY, width, height);
+      
+      // Draw corner fold (top-right corner)
+      const foldSize = Math.min(20, width * 0.15, height * 0.15);
+      context.fillStyle = element.noteColor ? 
+        adjustColorBrightness(element.noteColor, -20) : "#fbbf24";
+      
+      context.beginPath();
+      context.moveTo(minX + width - foldSize, minY);
+      context.lineTo(minX + width, minY);
+      context.lineTo(minX + width, minY + foldSize);
+      context.closePath();
+      context.fill();
+      
+      // Draw fold line
+      context.strokeStyle = element.noteColor ? 
+        adjustColorBrightness(element.noteColor, -40) : "#f59e0b";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(minX + width - foldSize, minY);
+      context.lineTo(minX + width, minY + foldSize);
+      context.stroke();
+        // Reset opacity for text
+      context.globalAlpha = 1;
+      
+      // Render title and content without height restrictions (auto-resize will handle sizing)
+      const padding = 12;
+      const foldAreaPadding = foldSize + 4; // Extra padding to avoid the fold area
+      const textX = minX + padding;
+      let textY = minY + padding;
+      const maxTextWidth = width - padding * 2 - foldAreaPadding;
+      
+      context.fillStyle = element.textColor || "#451a03";
+      context.textBaseline = 'top';
+        // Render title (bold)
+      if (element.title && element.title.trim() && maxTextWidth > 0) {
+        const titleSize = Math.max(11, Math.min(16, width / 12));
+        context.font = `bold ${titleSize}px Arial, sans-serif`;
+        const titleLineHeight = titleSize * 1.3;
+        
+        // Wrap title text
+        const titleLines = wrapText(context, element.title, maxTextWidth);
+        for (const line of titleLines) {
+          context.fillText(line, textX, textY);
+          textY += titleLineHeight;
+        }
+        
+        // Add space between title and content
+        if (element.content && element.content.trim()) {
+          textY += titleSize * 0.4;
+        }
+      }
+      
+      // Render content (normal weight)
+      if (element.content && element.content.trim() && maxTextWidth > 0) {
+        const contentSize = Math.max(9, Math.min(13, width / 15));
+        context.font = `${contentSize}px Arial, sans-serif`;
+        const contentLineHeight = contentSize * 1.3;
+        
+        // Wrap content text
+        const contentLines = wrapText(context, element.content, maxTextWidth);
+        for (const line of contentLines) {
+          context.fillText(line, textX, textY);
+          textY += contentLineHeight;
+        }
+      }
+      
+    } catch (error) {
+      console.warn("Error rendering sticky note:", error);
+    } finally {
+      context.restore();
+    }
+  }
 }
 
 function rgba(color, opacity) {
   if (color == "transparent") return "transparent";
 
+  // Handle hex colors (e.g., #fff3a0, #333)
+  if (color.startsWith('#')) {
+    let hex = color.substring(1);
+    
+    // Convert 3-digit hex to 6-digit
+    if (hex.length === 3) {
+      hex = hex.split('').map(char => char + char).join('');
+    }
+    
+    if (hex.length === 6) {
+      const red = parseInt(hex.substring(0, 2), 16);
+      const green = parseInt(hex.substring(2, 4), 16);
+      const blue = parseInt(hex.substring(4, 6), 16);
+      const alpha = opacity / 100;
+      
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+  }
+
+  // Handle rgb/rgba colors
   let matches = color.match(
     /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/
   );
   if (!matches) {
     throw new Error(
-      "Invalid color format. Please provide a color in RGBA format."
+      "Invalid color format. Please provide a color in RGB, RGBA, or hex format."
     );
   }
   opacity /= 100;
@@ -527,4 +648,161 @@ export function drawMultiSelection(selectedElements, context, scale) {
   
   // Reset line dash
   context.setLineDash([]);
+}
+
+// Enhanced draw function with auto-resize capability for sticky notes
+export function drawWithAutoResize(element, context, setElements, elements) {
+  // For sticky notes, check if auto-resize is needed before drawing
+  if (element.tool === "stickyNote" && setElements && elements) {
+    // Auto-resize the element if needed
+    element = autoResizeStickyNote(element, context, setElements, elements);
+  }
+  
+  // Use the regular draw function
+  return draw(element, context);
+}
+
+// Helper function to adjust color brightness for sticky note fold effect
+function adjustColorBrightness(color, amount) {
+  const matches = color.match(/^#([0-9a-f]{6})$/i);
+  if (matches) {
+    const [, hex] = matches;
+    let r = parseInt(hex.substr(0, 2), 16);
+    let g = parseInt(hex.substr(2, 2), 16);
+    let b = parseInt(hex.substr(4, 2), 16);
+    
+    r = Math.max(0, Math.min(255, r + amount));
+    g = Math.max(0, Math.min(255, g + amount));
+    b = Math.max(0, Math.min(255, b + amount));
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+  return color;
+}
+
+// Helper function to wrap text for sticky notes
+function wrapText(context, text, maxWidth) {
+  if (!text) return [];
+  
+  // Split by explicit line breaks first (handle Shift+Enter)
+  const paragraphs = text.split('\n');
+  const lines = [];
+
+  paragraphs.forEach((paragraph, paragraphIndex) => {
+    if (paragraph.trim() === '') {
+      // Empty line - preserve the spacing
+      lines.push('');
+      return;
+    }
+
+    const words = paragraph.split(' ');
+    if (words.length === 0) return;
+    
+    let currentLine = words[0] || '';
+
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + " " + word;
+      const width = context.measureText(testLine).width;
+      
+      if (width < maxWidth) {
+        currentLine = testLine;
+      } else {
+        // Current line is full, push it and start new line
+        lines.push(currentLine);
+        currentLine = word;
+        
+        // Handle very long words that exceed maxWidth
+        while (context.measureText(currentLine).width > maxWidth && currentLine.length > 1) {
+          // Break the word if it's too long
+          const breakPoint = Math.floor(currentLine.length * maxWidth / context.measureText(currentLine).width);
+          lines.push(currentLine.substring(0, breakPoint) + '-');
+          currentLine = currentLine.substring(breakPoint);
+        }
+      }
+    }
+    
+    // Push the last line of this paragraph
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  });
+
+  return lines;
+}
+
+// Helper function to calculate required height for sticky note content
+function calculateStickyNoteRequiredHeight(element, context) {
+  if (!element.title && !element.content) {
+    return Math.abs(element.y2 - element.y1); // Return current height if no content
+  }
+  
+  const width = Math.abs(element.x2 - element.x1);
+  const padding = 12;
+  const foldSize = Math.min(20, width * 0.15);
+  const foldAreaPadding = foldSize + 4;
+  const maxTextWidth = width - padding * 2 - foldAreaPadding;
+  
+  if (maxTextWidth <= 0) {
+    return Math.abs(element.y2 - element.y1); // Return current height if no space for text
+  }
+  
+  let totalHeight = padding * 2; // Top and bottom padding
+  
+  // Calculate title height
+  if (element.title && element.title.trim()) {
+    const titleSize = Math.max(11, Math.min(16, width / 12));
+    context.font = `bold ${titleSize}px Arial, sans-serif`;
+    const titleLineHeight = titleSize * 1.3;
+    const titleLines = wrapText(context, element.title, maxTextWidth);
+    totalHeight += titleLines.length * titleLineHeight;
+    
+    // Add space between title and content if both exist
+    if (element.content && element.content.trim()) {
+      totalHeight += titleSize * 0.4;
+    }
+  }
+  
+  // Calculate content height
+  if (element.content && element.content.trim()) {
+    const contentSize = Math.max(9, Math.min(13, width / 15));
+    context.font = `${contentSize}px Arial, sans-serif`;
+    const contentLineHeight = contentSize * 1.3;
+    const contentLines = wrapText(context, element.content, maxTextWidth);
+    totalHeight += contentLines.length * contentLineHeight;
+  }
+  
+  // Add some extra padding to prevent text from being too close to the bottom
+  totalHeight += 8;
+  
+  return Math.max(totalHeight, 100); // Minimum height of 100px
+}
+
+// Helper function to auto-resize sticky note if needed
+function autoResizeStickyNote(element, context, setElements, elements) {
+  const currentHeight = Math.abs(element.y2 - element.y1);
+  const requiredHeight = calculateStickyNoteRequiredHeight(element, context);
+  
+  // Only resize if content requires more height than current
+  if (requiredHeight > currentHeight) {
+    const heightDifference = requiredHeight - currentHeight;
+    
+    // Update the element's height
+    const updatedElement = {
+      ...element,
+      y2: element.y1 < element.y2 ? element.y2 + heightDifference : element.y2 - heightDifference
+    };
+    
+    // Update the elements array
+    if (setElements && elements) {
+      const updatedElements = elements.map(el => 
+        el.id === element.id ? updatedElement : el
+      );
+      setElements(updatedElements);
+    }
+    
+    return updatedElement;
+  }
+  
+  return element;
 }

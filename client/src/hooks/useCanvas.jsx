@@ -4,6 +4,7 @@ import useDimension from "./useDimension";
 import { lockUI } from "../helper/ui";
 import {
   draw,
+  drawWithAutoResize,
   drawFocuse,
   drawMultiSelection,
   cornerCursor,
@@ -56,8 +57,7 @@ export default function useCanvas() {  const {
     selectionBounds,
     setSelectionBounds,
     undo,
-    redo,
-    textInputMode,
+    redo,    textInputMode,
     setTextInputMode,
     handleTouchStart,
     handleTouchMove,
@@ -202,8 +202,7 @@ export default function useCanvas() {  const {
   const handleMouseDown = (event) => {
     const { clientX, clientY } = mousePosition(event);
     setCurrentMousePosition({ x: clientX, y: clientY });
-    
-    // Handle text tool click-to-add (PRIORITY - before lockUI)
+      // Handle text tool click-to-add (PRIORITY - before lockUI)
     if (selectedTool === "text") {
       // Use direct screen coordinates for fixed positioning
       setTextInputMode({ 
@@ -213,9 +212,37 @@ export default function useCanvas() {  const {
         canvasY: clientY 
       });
       return;
+    }    // Handle sticky note tool click-to-add directly (PRIORITY - before lockUI)
+    if (selectedTool === "stickyNote") {
+      const element = createElement(
+        clientX,
+        clientY,
+        clientX + 240,
+        clientY + 180,
+        {
+          ...style,
+          fill: "#fff3a0", // Default yellow sticky note color
+          strokeColor: "#333333", // Default text color
+          opacity: 85, // Default translucent
+        },
+        "stickyNote"
+      );      // Add sticky note specific properties with defaults
+      element.title = "";
+      element.content = "";
+      element.noteColor = "#fff3a0";
+      element.textColor = "#333333";
+
+      setElements((prevState) => [...prevState, element]);
+      
+      if (!lockTool) {
+        setSelectedTool("selection");
+        setSelectedElement(element);
+      }
+      
+      return;
     }
 
-    lockUI(true);    if (inCorner) {
+    lockUI(true);if (inCorner) {
       setResizeOldDementions(getElementById(selectedElement.id, elements))
       setElements((prevState) => prevState);
       setMouseAction({ x: clientX, y: clientY }); // Use transformed canvas coordinates
@@ -733,12 +760,13 @@ export default function useCanvas() {  const {
     const zoomPositionY = 2;
 
     const scaledWidth = canvas.width * scale;
-    const scaledHeight = canvas.height * scale;
-
-    const scaleOffsetX = (scaledWidth - canvas.width) / zoomPositionX;
+    const scaledHeight = canvas.height * scale;    const scaleOffsetX = (scaledWidth - canvas.width) / zoomPositionX;
     const scaleOffsetY = (scaledHeight - canvas.height) / zoomPositionY;
 
-    setScaleOffset({ x: scaleOffsetX, y: scaleOffsetY });
+    // Only update scaleOffset if it has actually changed to prevent infinite loops
+    if (Math.abs(scaleOffset.x - scaleOffsetX) > 0.001 || Math.abs(scaleOffset.y - scaleOffsetY) > 0.001) {
+      setScaleOffset({ x: scaleOffsetX, y: scaleOffsetY });
+    }
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -747,19 +775,19 @@ export default function useCanvas() {  const {
     context.translate(
       translate.x * scale - scaleOffsetX,
       translate.y * scale - scaleOffsetY
-    );    context.scale(scale, scale);    let focusedElement = null;
-    if (elements && Array.isArray(elements) && elements.length > 0) {
+    );    context.scale(scale, scale);    let focusedElement = null;    if (elements && Array.isArray(elements) && elements.length > 0) {
       // Additional safety check to prevent race conditions during heavy dragging
       const safeElements = elements.filter(element => element && element.id);
       safeElements.forEach((element) => {
         try {
+          // Use regular draw function for all elements during rendering
           draw(element, context);
           if (element.id == selectedElement?.id) focusedElement = element;
         } catch (error) {
           console.warn('Error drawing element:', element, error);
         }
       });
-    }    const pd = minmax(10 / scale, [0.5, 50]);
+    }const pd = minmax(10 / scale, [0.5, 50]);
       // Draw multi-selection indicators for multiple selected elements
     if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
       try {
@@ -819,10 +847,8 @@ export default function useCanvas() {  const {
             return;
           }
         }
-      }
-        // Handle multi-selection shortcuts
-      if (ctrlKey || metaKey) {
-        if (key.toLowerCase() === "a") {
+      }        // Handle multi-selection shortcuts
+      if (ctrlKey || metaKey) {        if (key.toLowerCase() === "a") {
           prevent();
           // Select all elements
           setSelectedElements(elements);

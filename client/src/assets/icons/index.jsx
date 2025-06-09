@@ -719,3 +719,21 @@ export const Library = () => (
     <path d="M4 4v16" />
   </svg>
 );
+
+export const StickyNote = () => (
+  <svg
+    height={demention}
+    width={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <rect width="16" height="16" x="4" y="4" rx="2" />
+    <path d="M16 4v16l-4-4H4" />
+    <path d="M8 8h8" />
+    <path d="M8 12h6" />
+  </svg>
+);

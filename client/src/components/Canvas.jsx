@@ -3,8 +3,7 @@ import { useAppContext } from "../provider/AppStates";
 import TextInput from "./TextInput";
 import { createPortal } from "react-dom";
 
-export default function Canvas() {
-  const {
+export default function Canvas() {  const {
     canvasRef,
     dimension,
     handleMouseDown,
@@ -32,8 +31,7 @@ export default function Canvas() {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: 'none' }} // Prevent default touch behaviors
-      />
-      {textInputMode && createPortal(
+      />      {textInputMode && createPortal(
         <TextInput
           position={{ x: textInputMode.x, y: textInputMode.y }}
           onComplete={() => setTextInputMode(null)}

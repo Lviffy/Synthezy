@@ -11,6 +11,7 @@ import {
   Pencil,
   Text,
   Image,
+  StickyNote,
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { getElementById, minmax } from "../helper/element";
@@ -362,6 +363,11 @@ export function AppContextProvider({ children }) {
         icon: Image,
         title: "Insert Image",
         toolAction,
+      },      {
+        slug: "stickyNote",
+        icon: StickyNote,
+        title: "Sticky Note",
+        toolAction,
       },
     ],
   ];  useEffect(() => {
@@ -414,8 +420,7 @@ export function AppContextProvider({ children }) {
         historyIndex,
         session,        setSession,
         showGrid,
-        setShowGrid,
-        textInputMode,
+        setShowGrid,        textInputMode,
         setTextInputMode,
         contextMenu,
         setContextMenu,
