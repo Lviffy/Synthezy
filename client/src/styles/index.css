@@ -337,8 +337,8 @@ section.toolbar .toolbutton.lock[data-lock="true"] .tool-shortcut {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-
-/* Special styling for AI tool button */
+/* REMOVE Special styling for AI tool button to make it consistent */
+/*
 section.toolbar .toolbutton.ai {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-color: #5a67d8;
@@ -375,33 +375,294 @@ section.toolbar .toolbutton.ai .tool-number {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-/* Update AI tool shortcut to match new style */
 section.toolbar .toolbutton.ai .tool-shortcut {
   color: rgba(255, 255, 255, 0.8);
   background-color: rgba(0, 0, 0, 0.2);
-  text-shadow: none; /* Remove text shadow if not needed or adjust */
+  text-shadow: none; 
 }
+*/
 
 /* AI Tool Panel - ensure all interactions work */
 .ai-tool-panel {
-  pointer-events: auto !important;
+  /* REMOVE pointer-events: auto !important; */
+  position: fixed;
+  top: 70px; /* Adjust as needed, below the header */
+  right: 16px;
+  width: 300px; /* Increased width for better layout */
+  max-height: calc(100vh - 90px); /* Adjust to prevent overlap with footer */
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.07),
+    0 5px 15px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  z-index: 100; /* Ensure it's above other elements */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevents content from spilling */
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  pointer-events: auto !important; /* Ensure panel itself is interactive */
 }
+
+.ai-tool-panel.hidden {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ai-tool-panel-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.5), rgba(255, 255, 255, 0.2));
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.ai-tool-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  font-family: primaryFont;
+  letter-spacing: -0.01em;
+}
+
+.ai-tool-panel-close-btn {
+  background: transparent;
+  border: none;
+  color: #4a5568;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ai-tool-panel-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a202c;
+}
+
+/* Renamed from .ai-tool-panel-content to .ai-tool-panel-scrollable-content */
+.ai-tool-panel-scrollable-content {
+  padding: 16px;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Original .ai-tool-panel-content scrollbar styles now apply to .ai-tool-panel-scrollable-content */
+.ai-tool-panel-scrollable-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ai-tool-panel-scrollable-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-tool-panel-scrollable-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.ai-tool-panel-scrollable-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.ai-tool-panel-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.9); /* Slight background to differentiate */
+  flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+.ai-tool-panel .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-tool-panel .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d3748;
+  font-family: secondaryFont;
+  margin-bottom: 4px; /* Add some space below label */
+}
+
+.ai-tool-panel .form-label .label-icon {
+  margin-right: 6px;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+
+.ai-tool-panel textarea,
+.ai-tool-panel select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background-color: #ffffff;
+  font-size: 13px;
+  font-family: secondaryFont;
+  color: #2d3748;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.ai-tool-panel textarea:focus,
+.ai-tool-panel select:focus {
+  outline: none;
+  border-color: #3b82f6; /* Blue focus border */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ai-tool-panel textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.ai-tool-panel select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234A5568' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  padding-right: 36px; /* Space for custom arrow */
+}
+
+.ai-tool-panel .option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-tool-panel .option-button {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.ai-tool-panel .option-button:hover {
+  background-color: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.ai-tool-panel .option-button.selected {
+  background-color: #e0e7ff; /* Light indigo */
+  border-color: #3b82f6;
+  color: #3730a3; /* Darker indigo for text */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.ai-tool-panel .option-button-icon {
+  margin-right: 10px;
+  font-size: 1.2em;
+}
+
+.ai-tool-panel .option-button-text .label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.ai-tool-panel .option-button.selected .option-button-text .label {
+  color: #3730a3;
+}
+
+.ai-tool-panel .option-button-text .desc {
+  font-size: 11px;
+  color: #64748b;
+  font-family: secondaryFont;
+}
+.ai-tool-panel .option-button.selected .option-button-text .desc {
+  color: #4f46e5; /* Indigo for description */
+}
+
+
+.ai-tool-panel .generate-button {
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: primaryFont;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.ai-tool-panel .generate-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.ai-tool-panel .generate-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.ai-tool-panel .generate-button:disabled {
+  background: #9ca3af; /* Gray when disabled */
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.ai-tool-panel .generate-button .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-tool-panel .error-message {
+  background-color: rgba(239, 68, 68, 0.1); /* Light red background */
+  color: #b91c1c; /* Darker red text */
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: secondaryFont;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-tool-panel .error-message::before {
+  content: '⚠️'; /* Warning icon */
+  font-size: 1.1em;
+}
+
 
 .ai-tool-panel * {
   pointer-events: auto !important;
-}
-
-.ai-tool-panel input,
-.ai-tool-panel textarea,
-.ai-tool-panel button,
-.ai-tool-panel select {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.ai-tool-panel input,
-.ai-tool-panel textarea {
-  cursor: text !important;
 }
 
 section.zoomOptions {
@@ -622,7 +883,6 @@ section.undoRedo > button:active:not(:disabled) {
 section.undoRedo > button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  color: #9ca3af;
 }
 
 section.undoRedo > button:disabled:hover {
@@ -1871,11 +2131,6 @@ section.styleOptions {
   margin-top: 8px;
 }
 
-.endCollab button {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  width: 100%;
-}
-
 /* Color Picker Component Styles */
 .color-picker-container {
   position: relative;
@@ -2115,7 +2370,7 @@ section.styleOptions {
   box-shadow: 
     0 12px 32px rgba(0, 0, 0, 0.12),
     0 6px 16px rgba(0, 0, 0, 0.06),
-    inset 0  1px 0 rgba(255, 255, 255, 0.9);
+    inset 0  1px 0 rgba(255, 255, 255, 255, 0.9);
   padding: 16px;
   z-index: 1000;
   animation: colorPickerFadeIn 0.2s ease-out;
@@ -2373,49 +2628,137 @@ section.styleOptions {
   flex-shrink: 0;
 }
 
-/* Responsive adjustments for color picker */
-@media (max-width: 768px) {
-  .modern-color-picker-overlay {
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  
-  .modern-color-picker {
-    width: calc(100vw - 40px);
-    max-width: 320px;
-  }
-  
-  .preset-colors-grid {
-    grid-template-columns: repeat(8, 1fr);
-  }
-  
-  .rgb-inputs-section {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .rgb-input-group {
-    flex-direction: row;
-    align-items: center;
-  }
-  
-  .rgb-input-group label {
-    width: 20px;
-    text-align: left;
-  }
+/* Style options panel specific to pen properties */
+.pen-properties-panel .properties-header {
+  /* Use existing header styles but ensure it's applied */
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.3), rgba(255, 255, 255, 0.1));
 }
 
-@media (max-width: 580px) {
-  .modern-color-picker-overlay {
-    left: 10px;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  
-  .modern-color-picker {
-    width: 100%;
-    max-width: none;
-  }
+.pen-properties-panel .panel-title {
+  font-size: 16px; /* Consistent with other panel titles */
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.pen-properties-panel .selection-badge.pen-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1d4ed8; /* A slightly different blue for distinction */
+  background: rgba(30, 64, 175, 0.08);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 64, 175, 0.15);
+}
+
+.pen-properties-panel .selection-info {
+  font-size: 11px;
+  color: #64748b;
+  font-family: secondaryFont;
+  font-weight: 500;
+}
+
+.pen-properties-panel .properties-section {
+  padding-top: 12px; /* Add some top padding if header is present */
+}
+
+.pen-properties-panel .property-group {
+  margin-bottom: 16px; /* Increased spacing between groups */
+}
+
+.pen-properties-panel .property-label {
+  margin-bottom: 10px; /* Increased spacing below label */
+  font-size: 12.5px; /* Slightly larger label */
+  color: #334155; /* Darker label color */
+}
+
+/* Custom styled select for Pen Type */
+.select-container {
+  position: relative;
+  width: 100%;
+}
+
+.property-select {
+  width: 100%;
+  padding: 10px 12px;
+  padding-right: 30px; /* Space for custom arrow */
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background-color: #fff;
+  color: #1e293b;
+  font-size: 13px;
+  font-family: secondaryFont;
+  appearance: none; /* Remove default arrow */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.property-select:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.property-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.select-arrow {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #64748b; /* Arrow color */
+  pointer-events: none; /* Pass clicks to select */
+  transition: border-color 0.2s ease;
+}
+
+.select-container:hover .select-arrow {
+  border-top-color: #334155;
+}
+
+/* Styling for Line Cap buttons */
+.line-cap-group .style-button {
+  width: auto; /* Allow buttons to size based on content */
+  min-width: 50px; /* Minimum width */
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: secondaryFont;
+}
+
+.line-cap-group .style-button.selected {
+  /* Styles for selected line cap button are inherited from .style-button.selected */
+  /* Add specific overrides if needed */
+  font-weight: 600;
+}
+
+/* Ensure sliders and color palettes fit well with new spacing */
+.pen-properties-panel .slider-container {
+  padding: 12px 0; /* Adjusted padding */
+}
+
+.pen-properties-panel .color-palette {
+  gap: 8px; /* Slightly more gap for color swatches */
+}
+
+.pen-properties-panel .color-swatch {
+  width: 26px; /* Slightly larger swatches */
+  height: 26px;
+  border-radius: 7px;
+}
+
+/* General improvements for property value display */
+.property-value {
+  font-size: 11px;
+  padding: 3px 7px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 5px;
 }

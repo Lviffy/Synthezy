@@ -65,28 +65,57 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
   // If draw tool is selected, show pen properties
   if (selectedTool === 'draw') {
     return (
-      <section className="styleOptions">
+      <section className="styleOptions pen-properties-panel"> {/* Added a specific class */}
+        <div className="properties-header"> {/* Added header */}
+          <div className="header-content">
+            <h3 className="panel-title">Pen Settings</h3>
+            {selectedPen && DEFAULT_PEN_STYLES[selectedPen]?.label && (
+              <span className="selection-badge pen-type-badge">
+                {DEFAULT_PEN_STYLES[selectedPen].label}
+              </span>
+            )}
+          </div>
+          <p className="selection-info">Customize your active pen</p>
+        </div>
         <div className="properties-content">
           <div className="properties-section">
-            <h4 className="section-title">Pen Properties</h4>
             {/* Pen Type Selector */}
             <div className="property-group">
               <label className="property-label">Pen Type</label>
-              <select 
-                value={selectedPen}
-                onChange={(e) => {
-                  const newPen = e.target.value;
-                  setSelectedPen(newPen);
-                  setPenProperties(DEFAULT_PEN_STYLES[newPen]);
-                }}
-                className="property-select" // Add a class for styling if needed
-              >
-                {Object.values(PEN_TYPES).map(penType => (
-                  <option key={penType} value={penType}>
-                    {DEFAULT_PEN_STYLES[penType]?.label || penType}
-                  </option>
-                ))}
-              </select>
+              <div className="select-container"> {/* Wrapper for custom styling */}
+                <select 
+                  value={selectedPen}
+                  onChange={(e) => {
+                    const newPen = e.target.value;
+                    setSelectedPen(newPen);
+                    // Reset to default properties of the new pen type,
+                    // but try to preserve common properties if applicable (e.g., color, width)
+                    const currentCommonProps = {
+                      strokeColor: penProperties.strokeColor,
+                      strokeWidth: penProperties.strokeWidth,
+                      opacity: penProperties.opacity,
+                      lineCap: penProperties.lineCap,
+                    };
+                    const newPenDefaults = DEFAULT_PEN_STYLES[newPen];
+                    setPenProperties({
+                      ...newPenDefaults, // Start with new pen's defaults
+                      // Override with common properties if they exist in the new pen's defaults
+                      ...(newPenDefaults.hasOwnProperty('strokeColor') && { strokeColor: currentCommonProps.strokeColor }),
+                      ...(newPenDefaults.hasOwnProperty('strokeWidth') && { strokeWidth: currentCommonProps.strokeWidth }),
+                      ...(newPenDefaults.hasOwnProperty('opacity') && { opacity: currentCommonProps.opacity }),
+                      ...(newPenDefaults.hasOwnProperty('lineCap') && { lineCap: currentCommonProps.lineCap }),
+                    });
+                  }}
+                  className="property-select"
+                >
+                  {Object.values(PEN_TYPES).map(penType => (
+                    <option key={penType} value={penType}>
+                      {DEFAULT_PEN_STYLES[penType]?.label || penType}
+                    </option>
+                  ))}
+                </select>
+                <span className="select-arrow" aria-hidden="true"></span> {/* Custom arrow */}
+              </div>
             </div>
 
             {/* Stroke Color for Pen */}
@@ -171,20 +200,21 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
             {/* Line Cap for Pen */}
             <div className="property-group">
               <label className="property-label">Line Cap</label>
-              <div className="button-group">
+              <div className="button-group line-cap-group"> {/* Added specific class */}
                 {LINE_CAP_OPTIONS.map(option => (
                   <button
                     key={option.slug}
                     type="button"
                     title={option.title}
                     className={
-                      "style-button" +
+                      "style-button line-cap-button" + // Added specific class
                       (option.slug === penProperties.lineCap ? " selected" : "")
                     }
                     onClick={() => setPenProperties(prev => ({ ...prev, lineCap: option.slug }))
                     }
                   >
-                    {option.title} {/* Or an icon */}
+                    {/* Consider adding icons here if available */}
+                    {option.title}
                   </button>
                 ))}
               </div>
