@@ -10,7 +10,7 @@ import {
   updateElement,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
-import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
+import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, CORNER_STYLES } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
 
 export default function Style({ selectedElement, selectedElements = [] }) {
@@ -21,20 +21,22 @@ export default function Style({ selectedElement, selectedElements = [] }) {
     strokeStyle: selectedElement?.strokeStyle,
     strokeColor: selectedElement?.strokeColor,
     opacity: selectedElement?.opacity,
+    sloppiness: selectedElement?.sloppiness ?? 1,
+    cornerStyle: selectedElement?.cornerStyle ?? "rounded",
     // Sticky note specific properties
     title: selectedElement?.title,
     content: selectedElement?.content,
     noteColor: selectedElement?.noteColor,
     textColor: selectedElement?.textColor,
-  });
-
-  useEffect(() => {
+  });  useEffect(() => {
     setElementStyle({
       fill: selectedElement?.fill,
       strokeWidth: selectedElement?.strokeWidth,
       strokeStyle: selectedElement?.strokeStyle,
       strokeColor: selectedElement?.strokeColor,
       opacity: selectedElement?.opacity,
+      sloppiness: selectedElement?.sloppiness ?? 1,
+      cornerStyle: selectedElement?.cornerStyle ?? "rounded",
       // Sticky note specific properties
       title: selectedElement?.title,
       content: selectedElement?.content,
@@ -148,45 +150,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                       }
                     }}
                   />
-                ))}
-              </div>
-            </div>
-
-            {/* Stroke Width */}
-            <div className="property-group">
-              <label className="property-label">
-                <span>Stroke Width</span>
-                <span className="property-value">{elementStyle.strokeWidth}px</span>
-              </label>
-              <div className="slider-container">
-                <input
-                  type="range"
-                  className="property-slider"
-                  min={0}
-                  max={20}
-                  value={elementStyle.strokeWidth}
-                  step="1"
-                  onChange={({ target }) => {
-                    const strokeWidth = minmax(+target.value, [0, 20]);
-                    setStylesStates({ strokeWidth });
-                    if (isMultiSelection) {
-                      updateMultipleElements(
-                        selectedElements,
-                        { strokeWidth },
-                        setElements,
-                        elements
-                      );
-                    } else {
-                      updateElement(
-                        selectedElement.id,
-                        { strokeWidth },
-                        setElements,
-                        elements
-                      );
-                    }
-                  }}
-                />
-              </div>
+                ))}              </div>
             </div>
 
             {/* Stroke Style */}
@@ -229,6 +193,87 @@ export default function Style({ selectedElement, selectedElements = [] }) {
               </div>
             </div>
 
+            {/* Stroke Width */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Stroke Width</span>
+                <span className="property-value">{elementStyle.strokeWidth}px</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  className="property-slider"
+                  min={0.5}
+                  max={20}
+                  value={elementStyle.strokeWidth}
+                  step="0.5"
+                  style={{
+                    '--slider-progress': `${((elementStyle.strokeWidth - 0.5) / (20 - 0.5)) * 100}%`
+                  }}
+                  onChange={({ target }) => {
+                    const strokeWidth = minmax(+target.value, [0.5, 20]);
+                    setStylesStates({ strokeWidth });
+                    if (isMultiSelection) {
+                      updateMultipleElements(
+                        selectedElements,
+                        { strokeWidth },
+                        setElements,
+                        elements
+                      );
+                    } else {
+                      updateElement(
+                        selectedElement.id,
+                        { strokeWidth },
+                        setElements,
+                        elements
+                      );
+                    }
+                  }}                />
+              </div>            </div>
+
+            {/* Corner Style - Only show for rectangles */}
+            {((selectedElement?.tool === "rectangle") || 
+              (isMultiSelection && selectedElements.some(el => el.tool === "rectangle"))) && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Corner Style</span>
+                </label>
+                <div className="button-group">
+                  {CORNER_STYLES.map((style, index) => (
+                    <button
+                      type="button"
+                      title={style.title}
+                      className={
+                        "style-button" +
+                        (style.slug === elementStyle.cornerStyle ? " selected" : "")
+                      }
+                      key={index}
+                      onClick={() => {
+                        setStylesStates({ cornerStyle: style.slug });
+                        if (isMultiSelection) {
+                          updateMultipleElements(
+                            selectedElements,
+                            { cornerStyle: style.slug },
+                            setElements,
+                            elements
+                          );
+                        } else {
+                          updateElement(
+                            selectedElement.id,
+                            { cornerStyle: style.slug },
+                            setElements,
+                            elements
+                          );
+                        }
+                      }}
+                    >
+                      <style.icon />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Opacity */}
             <div className="property-group">
               <label className="property-label">
@@ -243,6 +288,9 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                   className="property-slider"
                   value={elementStyle.opacity}
                   step="10"
+                  style={{
+                    '--slider-progress': `${elementStyle.opacity}%`
+                  }}
                   onChange={({ target }) => {
                     const opacity = minmax(+target.value, [0, 100]);
                     setStylesStates({ opacity });
@@ -257,6 +305,44 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                       updateElement(
                         selectedElement.id,
                         { opacity },
+                        setElements,
+                        elements
+                      );
+                    }
+                  }}
+                />
+              </div>
+            </div>            {/* Sloppiness */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Sloppiness</span>
+                <span className="property-value">{(elementStyle.sloppiness ?? 1).toFixed(1)}</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  className="property-slider"
+                  min={0}
+                  max={3}
+                  value={elementStyle.sloppiness ?? 1}
+                  step="0.1"
+                  style={{
+                    '--slider-progress': `${((elementStyle.sloppiness ?? 1) / 3) * 100}%`
+                  }}
+                  onChange={({ target }) => {
+                    const sloppiness = minmax(+target.value, [0, 3]);
+                    setStylesStates({ sloppiness });
+                    if (isMultiSelection) {
+                      updateMultipleElements(
+                        selectedElements,
+                        { sloppiness },
+                        setElements,
+                        elements
+                      );
+                    } else {
+                      updateElement(
+                        selectedElement.id,
+                        { sloppiness },
                         setElements,
                         elements
                       );

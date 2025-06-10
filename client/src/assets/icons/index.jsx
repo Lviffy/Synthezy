@@ -130,27 +130,25 @@ export const SolidLine = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
+    viewBox="0 0 24 24"
+    fill="none"
     stroke="currentColor"
-    strokeWidth="29.066"
-    version="1.1"
-    viewBox="-29.07 -29.07 348.8 348.8"
-    xmlSpace="preserve"
   >
-    <path fill="currentColor" d="M0 139.474H290.658V151.185H0z"></path>
+    <line x1="3" y1="12" x2="21" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
   </svg>
 );
 
 export const DashedLine = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 17 17"
     height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
   >
-    <path
-      fill="currentColor"
-      d="M0 8h4v1H0V8zm6.5 1h4V8h-4v1zM13 8v1h4V8h-4z"
-    ></path>
+    <line x1="3" y1="12" x2="6" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
+    <line x1="10" y1="12" x2="14" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
+    <line x1="18" y1="12" x2="21" y2="12" strokeWidth="2.5" strokeLinecap="round"/>
   </svg>
 );
 
@@ -158,10 +156,14 @@ export const DottedLine = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
     viewBox="0 0 24 24"
+    fill="currentColor"
   >
-    <path d="M3 13H1v-2h2zm4-2H5v2h2zm12 0h-2v2h2zm4 0h-2v2h2zm-12 0H9v2h2zm4 0h-2v2h2z"></path>
+    <circle cx="4.5" cy="12" r="1.2"/>
+    <circle cx="8.5" cy="12" r="1.2"/>
+    <circle cx="12" cy="12" r="1.2"/>
+    <circle cx="15.5" cy="12" r="1.2"/>
+    <circle cx="19.5" cy="12" r="1.2"/>
   </svg>
 );
 
@@ -735,5 +737,31 @@ export const StickyNote = () => (
     <path d="M16 4v16l-4-4H4" />
     <path d="M8 8h8" />
     <path d="M8 12h6" />
+  </svg>
+);
+
+export const RoundedCorners = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <rect x="4" y="4" width="16" height="16" rx="3" ry="3"/>
+  </svg>
+);
+
+export const SharpCorners = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <rect x="4" y="4" width="16" height="16" rx="0" ry="0"/>
   </svg>
 );

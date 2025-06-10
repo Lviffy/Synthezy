@@ -1,4 +1,4 @@
-import { DashedLine, DottedLine, SolidLine } from "../assets/icons";
+import { DashedLine, DottedLine, SolidLine, RoundedCorners, SharpCorners } from "../assets/icons";
 
 export const BACKGROUND_COLORS = [
   "transparent",
@@ -28,6 +28,19 @@ export const STROKE_STYLES = [
   {
     slug: "dotted",
     icon: DottedLine,
+  },
+];
+
+export const CORNER_STYLES = [
+  {
+    slug: "rounded",
+    icon: RoundedCorners,
+    title: "Rounded Corners",
+  },
+  {
+    slug: "sharp",
+    icon: SharpCorners,
+    title: "Sharp Corners",
   },
 ];
 

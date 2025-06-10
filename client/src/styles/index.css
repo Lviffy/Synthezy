@@ -694,8 +694,9 @@ section.credits a:active svg {
 
 section.styleOptions {
   position: fixed;
-  top: 16px;
+  top: 50%;
   left: 16px;
+  transform: translateY(-50%);
   width: 220px;
   max-height: calc(100vh - 32px);
   padding: 0;
@@ -718,7 +719,7 @@ section.styleOptions:hover {
     0 12px 32px rgba(0, 0, 0, 0.08),
     0 6px 16px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transform: translateY(-1px);
+  transform: translateY(-50%) translateY(-1px);
 }
 
 /* Header */
@@ -860,7 +861,7 @@ section.styleOptions:hover {
 .color-swatch {
   width: 24px;
   height: 24px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1.5px solid rgba(0, 0, 0, 0.08);
   background: var(--color);
   cursor: pointer;
@@ -881,67 +882,133 @@ section.styleOptions:hover {
 /* Sliders */
 .slider-container {
   position: relative;
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
 }
 
 .property-slider {
   width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+  height: 2px;
+  border-radius: 2px;
+  background: #f1f5f9;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.property-slider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  width: var(--slider-progress, 0%);
+  transition: width 0.15s ease;
+  pointer-events: none;
+}
+
+.property-slider:hover {
+  background: #e2e8f0;
+}
+
+.property-slider:hover::before {
+  background: #2563eb;
 }
 
 .property-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ffffff;
   border: 2px solid #3b82f6;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 
+    0 0 0 0 rgba(59, 130, 246, 0),
+    0 1px 2px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .property-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  border-color: #2563eb;
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.1),
+    0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.property-slider::-webkit-slider-thumb:active {
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  box-shadow: 
+    0 0 0 4px rgba(59, 130, 246, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.property-slider:focus::-webkit-slider-thumb {
+  box-shadow: 
+    0 0 0 2px rgba(59, 130, 246, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .property-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ffffff;
-  border: 3px solid #3b82f6;
+  border: 2px solid #3b82f6;
   cursor: pointer;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  -moz-appearance: none;
+}
+
+.property-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  border-color: #2563eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.property-slider::-moz-range-track {
+  height: 2px;
+  border-radius: 2px;
+  background: #f1f5f9;
+  border: none;
 }
 
 /* Button Groups */
 .button-group {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  justify-content: center;
   flex-wrap: wrap;
 }
 
 .style-button {
   display: grid;
   place-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
+  width: 44px;
+  height: 36px;
+  border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.95);
   color: #4b5563;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .style-button::before {
@@ -957,8 +1024,11 @@ section.styleOptions:hover {
   transform: translateY(-1px);
   border-color: rgba(59, 130, 246, 0.2);
   background: rgba(59, 130, 246, 0.04);
-  color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: #2563eb;
+  box-shadow: 
+    0 4px 12px rgba(59, 130, 246, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .style-button:hover::before {
@@ -966,14 +1036,32 @@ section.styleOptions:hover {
 }
 
 .style-button.selected {
-  background: #3b82f6;
-  border-color: #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: #1d4ed8;
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 4px 12px rgba(59, 130, 246, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: none;
+}
+
+.style-button.selected::before {
+  opacity: 0;
 }
 
 .style-button:active {
   transform: translateY(0);
+}
+
+.style-button svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease;
+}
+
+.style-button:hover svg {
+  transform: scale(1.05);
 }
 
 /* Action Buttons */
@@ -1074,7 +1162,8 @@ section.styleOptions:hover {
   section.styleOptions {
     width: 200px;
     left: 12px;
-    top: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     max-height: calc(100vh - 24px);
   }
   
@@ -1121,7 +1210,8 @@ section.styleOptions:hover {
     width: calc(100vw - 24px);
     max-width: 200px;
     left: 8px;
-    top: 8px;
+    top: 50%;
+    transform: translateY(-50%);
   }
   
   .color-palette {

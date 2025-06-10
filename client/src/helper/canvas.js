@@ -28,14 +28,141 @@ export const shapes = {
       y2 - headlen * Math.sin(angle + Math.PI / 7),
       options
     );
-  },
-  line: (x1, y1, x2, y2, roughCanvas, options) => {
+  },  line: (x1, y1, x2, y2, roughCanvas, options) => {
+    // Handle dotted lines with custom round dots
+    if (options.strokeLineDash && options.strokeLineDash.length === 2) {
+      const context = roughCanvas.canvas.getContext('2d');
+      const dotSize = options.strokeLineDash[0];
+      const spacing = options.strokeLineDash[1];
+      
+      // Check if this looks like a dotted pattern (small dot size)
+      if (dotSize < options.strokeWidth * 1.2) {
+        context.save();
+        context.fillStyle = options.stroke;
+        
+        // Calculate line properties
+        const lineLength = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const totalSpacing = dotSize + spacing;
+        const numDots = Math.floor(lineLength / totalSpacing) + 1;
+        
+        // Draw round dots along the line
+        for (let i = 0; i < numDots; i++) {
+          const distance = i * totalSpacing;
+          if (distance > lineLength) break;
+          
+          const dotX = x1 + Math.cos(angle) * distance;
+          const dotY = y1 + Math.sin(angle) * distance;
+          
+          context.beginPath();
+          context.arc(dotX, dotY, dotSize / 2, 0, Math.PI * 2);
+          context.fill();
+        }
+        
+        context.restore();
+        return;
+      }
+    }
+    
+    // Default line rendering
     roughCanvas.line(x1, y1, x2, y2, options);
-  },
-  rectangle: (x1, y1, x2, y2, roughCanvas, options) => {
+  },  rectangle: (x1, y1, x2, y2, roughCanvas, options, element) => {
     const width = x2 - x1;
     const height = y2 - y1;
-    roughCanvas.rectangle(x1, y1, width, height, options);
+    // Fallback to "rounded" for elements that don't have cornerStyle property (backwards compatibility)
+    const cornerStyle = element?.cornerStyle !== undefined ? element.cornerStyle : "rounded";
+    const sloppiness = options.roughness || 1;
+    
+    // If we want sharp corners OR very low sloppiness, use native canvas for crisp rendering
+    if (cornerStyle === "sharp" && sloppiness <= 0.5) {
+      const context = roughCanvas.canvas.getContext('2d');
+      context.save();
+      
+      // Set up stroke properties for clean corners
+      context.strokeStyle = options.stroke;
+      context.lineWidth = options.strokeWidth;
+      context.lineJoin = 'miter';
+      context.miterLimit = 10;
+      context.lineCap = 'round';
+      
+      // Handle fill
+      if (options.fill) {
+        context.fillStyle = options.fill;
+        context.fillRect(x1, y1, width, height);
+      }
+      
+      // Handle stroke with dash patterns
+      if (options.strokeLineDash) {
+        context.setLineDash(options.strokeLineDash);
+      }
+      
+      // Draw rectangle stroke
+      context.strokeRect(x1, y1, width, height);
+      
+      context.restore();
+    } else if (cornerStyle === "rounded") {
+      // For rounded corners, we need to create a custom path and let rough.js render it
+      const cornerRadius = Math.min(20, Math.min(Math.abs(width), Math.abs(height)) * 0.15);
+      const r = Math.min(cornerRadius, Math.abs(width) / 2, Math.abs(height) / 2);
+      
+      if (r > 0) {
+        // Create rounded rectangle path as a series of lines and arcs
+        // We'll use rough.js curve and line functions to maintain the hand-drawn effect
+        const context = roughCanvas.canvas.getContext('2d');
+        
+        // Calculate the path points for rounded rectangle
+        const path = [];
+        
+        // Top edge (left to right, starting after left corner)
+        path.push(['M', x1 + r, y1]);
+        path.push(['L', x1 + width - r, y1]);
+        
+        // Top-right corner (arc)
+        path.push(['Q', x1 + width, y1, x1 + width, y1 + r]);
+        
+        // Right edge (top to bottom)
+        path.push(['L', x1 + width, y1 + height - r]);
+        
+        // Bottom-right corner (arc)
+        path.push(['Q', x1 + width, y1 + height, x1 + width - r, y1 + height]);
+        
+        // Bottom edge (right to left)
+        path.push(['L', x1 + r, y1 + height]);
+        
+        // Bottom-left corner (arc)
+        path.push(['Q', x1, y1 + height, x1, y1 + height - r]);
+        
+        // Left edge (bottom to top)
+        path.push(['L', x1, y1 + r]);
+        
+        // Top-left corner (arc)
+        path.push(['Q', x1, y1, x1 + r, y1]);
+        
+        // Close the path
+        path.push(['Z']);
+        
+        // Convert path to rough.js path format
+        const pathString = path.map(segment => {
+          if (segment[0] === 'M' || segment[0] === 'L') {
+            return `${segment[0]} ${segment[1]} ${segment[2]}`;
+          } else if (segment[0] === 'Q') {
+            return `${segment[0]} ${segment[1]} ${segment[2]} ${segment[3]} ${segment[4]}`;
+          } else {
+            return segment[0];
+          }
+        }).join(' ');
+        
+        // Use rough.js to draw the path with sloppiness
+        roughCanvas.path(pathString, options);
+      } else {
+        // If radius is 0, just draw a regular rectangle
+        roughCanvas.rectangle(x1, y1, width, height, options);
+      }
+    } else {
+      // Use rough.js for thinner strokes to maintain hand-drawn aesthetic
+      // Note: rough.js doesn't support rounded corners, so use regular rectangle
+      roughCanvas.rectangle(x1, y1, width, height, options);
+    }
   },
   diamond: (x1, y1, x2, y2, roughCanvas, options) => {
     const width = x2 - x1;
@@ -297,19 +424,19 @@ export function draw(element, context) {
     strokeStyle,
     fill,
     opacity,
+    sloppiness,
+    cornerStyle,
   } = element;
 
   // Create rough canvas instance
-  const roughCanvas = rough.canvas(context.canvas);
-  
-  // Convert stroke style to rough.js options
-  let roughnessValue = 1;
+  const roughCanvas = rough.canvas(context.canvas);  // Convert stroke style to rough.js options
+  let roughnessValue = sloppiness !== undefined ? sloppiness : 1;
   let strokeLineDash = undefined;
   
   if (strokeStyle === "dashed") {
-    strokeLineDash = [strokeWidth * 3, strokeWidth * 2];
+    strokeLineDash = [strokeWidth * 8, strokeWidth * 5];
   } else if (strokeStyle === "dotted") {
-    strokeLineDash = [strokeWidth, strokeWidth];
+    strokeLineDash = [strokeWidth * 0.8, strokeWidth * 1.5];
   }
 
   // Prepare rough.js options
@@ -321,7 +448,6 @@ export function draw(element, context) {
       seed = (seed * 31 + element.id.charCodeAt(i)) % 1000000;
     }
   }
-  
   const options = {
     stroke: rgba(strokeColor, opacity),
     strokeWidth: strokeWidth,

@@ -58,7 +58,9 @@ export function AppContextProvider({ children }) {
     strokeStyle: STROKE_STYLES[0].slug,
     fill: BACKGROUND_COLORS[0],
     opacity: 100,
-  });  const [showGrid, setShowGrid] = useState(true);
+    sloppiness: 1,
+    cornerStyle: "rounded",
+  });const [showGrid, setShowGrid] = useState(true);
   const [textInputMode, setTextInputMode] = useState(null);
   const [isZooming, setIsZooming] = useState(false);
   
