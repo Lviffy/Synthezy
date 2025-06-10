@@ -55,6 +55,8 @@ export const SHORT_CUTS = [
   // Add keyboard shortcuts here if needed for the shortKey function
 ];
 
+export * from './penStyles';
+
 export const FILL_PATTERNS = [
   {
     slug: "solid",

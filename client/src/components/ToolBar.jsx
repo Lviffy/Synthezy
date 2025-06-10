@@ -28,7 +28,7 @@ export default function ToolBar() {
                 aria-describedby={`tooltip-${tool.slug}`}
               >                <tool.icon />
                 {/* Tool number indicator */}
-                <span className="tool-number" aria-hidden="true">
+                <span className="tool-shortcut" aria-hidden="true">
                   {toolCounter === 10 ? '0' : toolCounter === 11 ? 'i' : toolCounter}
                 </span>
                 {/* Active indicator for selected tool */}

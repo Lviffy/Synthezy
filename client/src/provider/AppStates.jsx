@@ -13,11 +13,13 @@ import {
   Image,
   StickyNote,
   AIBrain,
+  Eraser, // Added Eraser icon import
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { getElementById, minmax } from "../helper/element";
 import useHistory from "../hooks/useHistory";
 import { socket } from "../api/socket";
+import { PEN_TYPES, DEFAULT_PEN_STYLES } from "../global/penStyles"; // Added
 
 const AppContext = createContext();
 
@@ -68,6 +70,10 @@ export function AppContextProvider({ children }) {
   // AI Panel state
   const [showAIPanel, setShowAIPanel] = useState(false);
   
+  // Pen tool state
+  const [selectedPen, setSelectedPen] = useState(PEN_TYPES.REGULAR);
+  const [penProperties, setPenProperties] = useState(DEFAULT_PEN_STYLES[PEN_TYPES.REGULAR]);
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null);
   const [currentMousePosition, setCurrentMousePosition] = useState({ x: 0, y: 0 });
@@ -302,6 +308,10 @@ export function AppContextProvider({ children }) {
       return;
     }
     setSelectedTool(slug);
+    if (slug === "draw") {
+      // When draw tool is selected, ensure penProperties are set for the current pen
+      setPenProperties(DEFAULT_PEN_STYLES[selectedPen]);
+    }
   };
   const tools = [
     [
@@ -360,6 +370,12 @@ export function AppContextProvider({ children }) {
         title: "Draw",
         toolAction,
       },      {
+        slug: "eraser", // Added Eraser tool slug
+        icon: Eraser,   // Added Eraser icon
+        title: "Eraser", // Added Eraser title
+        toolAction,
+      },
+      {
         slug: "text",
         icon: Text,
         title: "Add Text • Click anywhere to start typing • Press T for quick access • Supports multi-line text",
@@ -443,6 +459,10 @@ export function AppContextProvider({ children }) {
         handleTouchStart,
         handleTouchMove,
         handleTouchEnd,
+        selectedPen, // Added
+        setSelectedPen, // Added
+        penProperties, // Added
+        setPenProperties, // Added
       }}
     >
       {children}

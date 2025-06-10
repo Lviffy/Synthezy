@@ -192,25 +192,72 @@ export const shapes = {
     // For freehand drawing, we need to draw the path from points
     if (element && element.points && element.points.length > 1) {
       const points = element.points;
-      
-      // Draw smooth path through all points
-      for (let i = 0; i < points.length - 1; i++) {
-        roughCanvas.line(
-          points[i].x,
-          points[i].y,
-          points[i + 1].x,
-          points[i + 1].y,
-          { 
-            ...options, 
-            roughness: 0.5, // Smoother for freehand drawing
-            stroke: options.stroke,
-            strokeWidth: options.strokeWidth 
-          }
-        );
+      // Destructure pen properties. Opacity is 0-1. Smoothing is now always true.
+      const { penType, strokeColor, strokeWidth, opacity, lineCap } = element; 
+
+      const context = roughCanvas.canvas.getContext('2d');
+      context.save();
+      context.lineCap = lineCap || 'round'; 
+      context.strokeStyle = rgba(strokeColor, opacity); 
+      context.lineWidth = strokeWidth;
+
+      context.beginPath();
+      context.moveTo(points[0].x, points[0].y);
+
+      // Smoothing is now always enabled (Chaikin's algorithm)
+      if (points.length > 2) { 
+        let smoothedPoints = [];
+        smoothedPoints.push(points[0]);
+
+        for (let i = 0; i < points.length - 1; i++) {
+          const p0 = points[i];
+          const p1 = points[i+1];
+          
+          const Q = { x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y };
+          const R = { x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y };
+          
+          smoothedPoints.push(Q);
+          smoothedPoints.push(R);
+        }
+        
+        if (smoothedPoints.length > 1) {
+            context.moveTo(smoothedPoints[0].x, smoothedPoints[0].y);
+            for (let i = 1; i < smoothedPoints.length; i++) {
+                context.lineTo(smoothedPoints[i].x, smoothedPoints[i].y);
+            }
+        }
+      } else {
+        // Not enough points for Chaikin, draw direct lines
+        for (let i = 1; i < points.length; i++) {
+          context.lineTo(points[i].x, points[i].y);
+        }
       }
+      
+      context.stroke();
+      context.restore();
+
+    } else if (element && element.points && element.points.length === 1) {
+      // Draw a single dot if only one point exists
+      const point = element.points[0];
+      const { strokeColor, strokeWidth, opacity } = element;
+      const context = roughCanvas.canvas.getContext('2d');
+      context.save();
+      // Use the rgba helper for consistency
+      context.fillStyle = rgba(strokeColor, opacity);
+      context.beginPath();
+      context.arc(point.x, point.y, strokeWidth / 2, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
     } else {
-      // Fallback for single point or line
-      roughCanvas.line(x1, y1, x2, y2, options);
+      // Fallback for single point or line (should not be hit if points array is managed correctly)
+      // This might be for other tools if they somehow use 'draw' type without points.
+      const { strokeColor, strokeWidth, opacity } = element || options; // Use element properties if available
+      roughCanvas.line(x1, y1, x2, y2, { 
+        ...options, 
+        // Use the rgba helper
+        stroke: rgba(strokeColor, opacity), 
+        strokeWidth 
+      });
     }
   },
   text: (x1, y1, x2, y2, roughCanvas, options, element) => {
@@ -447,6 +494,55 @@ export function drawFocuse(element, context, padding, scale) {
   context.closePath();
 }
 
+// Helper function to convert color and opacity to rgba format
+export function rgba(color, opacityInput) { // Renamed opacity to opacityInput
+  if (typeof color !== 'string') {
+    // Fallback if color is not a string, though this shouldn't happen with proper inputs
+    // Assuming opacityInput is 0-1 if it's from penProperties, or 0-100 if from older style objects
+    const alpha = opacityInput > 1 ? opacityInput / 100 : opacityInput;
+    return `rgba(0,0,0,${alpha})`;
+  }
+
+  // Determine if opacity is 0-1 (new pen style) or 0-100 (old style object)
+  // penProperties.opacity is 0-1. Older element.style.opacity might be 0-100.
+  const alpha = opacityInput > 1 && opacityInput <= 100 ? opacityInput / 100 : Math.min(1, Math.max(0, opacityInput));
+
+  // Handle hex colors
+  if (color.startsWith("#")) {
+    let hex = color.slice(1);
+    if (hex.length === 3) {
+      hex = hex
+        .split("")
+        .map((char) => char + char)
+        .join("");
+    }
+    const red = parseInt(hex.substring(0, 2), 16);
+    const green = parseInt(hex.substring(2, 4), 16);
+    const blue = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  }
+
+  // Handle rgb/rgba colors
+  const rgbMatch = color.match(
+    /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/
+  );
+  if (rgbMatch) {
+    const red = parseInt(rgbMatch[1]);
+    const green = parseInt(rgbMatch[2]);
+    const blue = parseInt(rgbMatch[3]);
+    const originalAlpha = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+    const finalAlpha = originalAlpha * alpha; // Blend with the input alpha
+    return `rgba(${red}, ${green}, ${blue}, ${finalAlpha})`;
+  }
+  
+  // Fallback for named colors or other formats (browser will handle)
+  // This won't directly apply opacity if it's a named color, 
+  // but canvas context's globalAlpha would have to be used before drawing such elements.
+  // However, for our controlled inputs, we should always get hex/rgb.
+  console.warn("Unsupported color format for direct RGBA conversion:", color);
+  return color; // Or a default like `rgba(0,0,0,${opacityValue})`
+}
+
 export function draw(element, context) {
   const {
     tool,
@@ -454,13 +550,15 @@ export function draw(element, context) {
     y1,
     x2,
     y2,
-    strokeWidth,
-    strokeColor,
+    // strokeWidth, // Now taken from element.penProperties or element itself for 'draw'
+    // strokeColor, // Now taken from element.penProperties or element itself for 'draw'
     strokeStyle,
     fill,
-    opacity,
+    // opacity, // Now taken from element.penProperties or element itself for 'draw'
     sloppiness,
     cornerStyle,
+    // Pen-specific properties are now part of the element for 'draw' tool
+    // penType, lineCap, smoothing, etc. are directly on 'element' if tool === 'draw'
   } = element;
 
   // Create rough canvas instance
@@ -469,9 +567,12 @@ export function draw(element, context) {
   let strokeLineDash = undefined;
   
   if (strokeStyle === "dashed") {
-    strokeLineDash = [strokeWidth * 8, strokeWidth * 5];
+    // Use element's strokeWidth if available (e.g., for 'draw' tool), otherwise fallback to a default or options
+    const sw = element.strokeWidth || element.style?.strokeWidth || 2; // Fallback for non-draw elements
+    strokeLineDash = [sw * 8, sw * 5];
   } else if (strokeStyle === "dotted") {
-    strokeLineDash = [strokeWidth * 0.8, strokeWidth * 1.5];
+    const sw = element.strokeWidth || element.style?.strokeWidth || 2;
+    strokeLineDash = [sw * 0.8, sw * 1.5];
   }
 
   // Prepare rough.js options
@@ -486,19 +587,24 @@ export function draw(element, context) {
   let fillColor = fill;
   let fillStyle = "solid";
   
+  // Use element's strokeColor and opacity if available (e.g., for 'draw' tool)
+  const currentStrokeColor = element.strokeColor || element.style?.strokeColor || "#000000";
+  // Opacity from element (0-1) or element.style (0-100)
+  const currentOpacity = element.opacity !== undefined ? element.opacity : (element.style?.opacity !== undefined ? element.style.opacity : 100);
+
   if (fill === "transparent" && element.fillPattern && element.fillPattern !== "solid") {
     // For transparent backgrounds with patterns, use a semi-transparent stroke color
-    fillColor = rgba(strokeColor, 0.3);
+    fillColor = rgba(currentStrokeColor, 0.3 * 100); // rgba expects 0-100 for the second param if it's not from penStyle
     fillStyle = element.fillPattern === "cross-hatch" ? "cross-hatch" : "hachure";
   } else if (fill !== "transparent") {
-    fillColor = rgba(fill, opacity);
+    fillColor = rgba(fill, currentOpacity); // currentOpacity will be handled by rgba
     fillStyle = element.fillPattern === "hachure" ? "hachure" : 
                element.fillPattern === "cross-hatch" ? "cross-hatch" : "solid";
   }
 
   const options = {
-    stroke: rgba(strokeColor, opacity),
-    strokeWidth: strokeWidth,
+    stroke: rgba(currentStrokeColor, currentOpacity), // currentOpacity will be handled by rgba
+    strokeWidth: element.strokeWidth || element.style?.strokeWidth || 2, // Use element's strokeWidth
     fill: fill === "transparent" && element.fillPattern === "solid" ? undefined : fillColor,
     fillStyle: fillStyle,
     roughness: roughnessValue,
@@ -737,48 +843,6 @@ function isColorDark(color) {
   return false;
 }
 
-function rgba(color, opacity) {
-  if (color == "transparent") return "transparent";
-
-  // Handle hex colors (e.g., #fff3a0, #333)
-  if (color.startsWith('#')) {
-    let hex = color.substring(1);
-    
-    // Convert 3-digit hex to 6-digit
-    if (hex.length === 3) {
-      hex = hex.split('').map(char => char + char).join('');
-    }
-    
-    if (hex.length === 6) {
-      const red = parseInt(hex.substring(0, 2), 16);
-      const green = parseInt(hex.substring(2, 4), 16);
-      const blue = parseInt(hex.substring(4, 6), 16);
-      const alpha = opacity / 100;
-      
-      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-    }
-  }
-
-  // Handle rgb/rgba colors
-  let matches = color.match(
-    /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/
-  );
-  if (!matches) {
-    throw new Error(
-      "Invalid color format. Please provide a color in RGB, RGBA, or hex format."
-    );
-  }
-  opacity /= 100;
-  let red = parseInt(matches[1]);
-  let green = parseInt(matches[2]);
-  let blue = parseInt(matches[3]);
-  let alpha = parseFloat(matches[4] * opacity || opacity);
-
-  let newColor = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-
-  return newColor;
-}
-
 export function inSelectedCorner(element, x, y, padding, scale) {
   padding = element.tool == "line" || element.tool == "arrow" ? 0 : padding;
 
@@ -936,78 +1000,80 @@ function wrapText(context, text, maxWidth) {
   return lines;
 }
 
-// Helper function to calculate required height for sticky note content
-function calculateStickyNoteRequiredHeight(element, context) {
-  if (!element.title && !element.content) {
-    return Math.abs(element.y2 - element.y1); // Return current height if no content
-  }
-  
-  const width = Math.abs(element.x2 - element.x1);
-  const padding = 12;
-  const foldSize = Math.min(20, width * 0.15);
-  const foldAreaPadding = foldSize + 4;
-  const maxTextWidth = width - padding * 2 - foldAreaPadding;
-  
-  if (maxTextWidth <= 0) {
-    return Math.abs(element.y2 - element.y1); // Return current height if no space for text
-  }
-  
-  let totalHeight = padding * 2; // Top and bottom padding
-  
-  // Calculate title height
-  if (element.title && element.title.trim()) {
-    const titleSize = Math.max(11, Math.min(16, width / 12));
-    context.font = `bold ${titleSize}px Arial, sans-serif`;
-    const titleLineHeight = titleSize * 1.3;
-    const titleLines = wrapText(context, element.title, maxTextWidth);
-    totalHeight += titleLines.length * titleLineHeight;
-    
-    // Add space between title and content if both exist
-    if (element.content && element.content.trim()) {
-      totalHeight += titleSize * 0.4;
-    }
-  }
-  
-  // Calculate content height
-  if (element.content && element.content.trim()) {
-    const contentSize = Math.max(9, Math.min(13, width / 15));
-    context.font = `${contentSize}px Arial, sans-serif`;
-    const contentLineHeight = contentSize * 1.3;
-    const contentLines = wrapText(context, element.content, maxTextWidth);
-    totalHeight += contentLines.length * contentLineHeight;
-  }
-  
-  // Add some extra padding to prevent text from being too close to the bottom
-  totalHeight += 8;
-  
-  return Math.max(totalHeight, 100); // Minimum height of 100px
-}
+// Function to draw the eraser icon and its trail
+export function drawEraser(context, eraserTrail, currentMousePos, scale) {
+  if (!context) return;
+  const MAX_TRAIL_DURATION = 500; // ms, should match useCanvas.jsx filter duration
+  const ERASER_HEAD_RADIUS_WORLD = 5; // Current radius for a thinner eraser
 
-// Helper function to auto-resize sticky note if needed
-function autoResizeStickyNote(element, context, setElements, elements) {
-  const currentHeight = Math.abs(element.y2 - element.y1);
-  const requiredHeight = calculateStickyNoteRequiredHeight(element, context);
-  
-  // Only resize if content requires more height than current
-  if (requiredHeight > currentHeight) {
-    const heightDifference = requiredHeight - currentHeight;
-    
-    // Update the element's height
-    const updatedElement = {
-      ...element,
-      y2: element.y1 < element.y2 ? element.y2 + heightDifference : element.y2 - heightDifference
-    };
-    
-    // Update the elements array
-    if (setElements && elements) {
-      const updatedElements = elements.map(el => 
-        el.id === element.id ? updatedElement : el
-      );
-      setElements(updatedElements);
-    }
-    
-    return updatedElement;
+  // Draw the current eraser position indicator (a simple circle)
+  if (currentMousePos) {
+    context.save();
+    context.beginPath();
+    context.arc(currentMousePos.x, currentMousePos.y, ERASER_HEAD_RADIUS_WORLD / scale, 0, Math.PI * 2);
+    context.fillStyle = "rgba(150, 150, 150, 0.5)"; // Semi-transparent grey
+    context.fill();
+    context.strokeStyle = "rgba(100, 100, 100, 0.8)";
+    context.lineWidth = 1 / scale;
+    context.stroke();
+    context.restore();
   }
-  
-  return element;
+
+  // Draw the smoothed eraser trail with fading opacity and consistent width
+  if (eraserTrail && eraserTrail.length > 1) {
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    const now = Date.now();
+    const trailWidth = Math.max(1, (ERASER_HEAD_RADIUS_WORLD * 2) / scale); // Diameter of head, min 1px
+
+    // Apply Chaikin's algorithm for smoothing if enough points exist
+    let pointsToDraw = eraserTrail;
+    if (eraserTrail.length > 2) {
+      let smoothedPoints = [];
+      // Add the first point of the original trail to start the smoothed line correctly
+      smoothedPoints.push(eraserTrail[0]); 
+
+      for (let i = 0; i < eraserTrail.length - 1; i++) {
+        const p0 = eraserTrail[i];
+        const p1 = eraserTrail[i + 1];
+        
+        // Check if p0 and p1 have time properties before calculating age for Q and R
+        // This is important because the first point pushed might not have a 'time' if it's just {x,y}
+        // However, eraserTrail points *should* all have 'time'. This is a safeguard.
+        const Q_time = p0.time; // Or interpolate time if necessary, but for now, use p0's time
+        const R_time = p1.time; // Or use p1's time
+
+        const Q = { x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y, time: Q_time };
+        const R = { x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y, time: R_time };
+        
+        smoothedPoints.push(Q);
+        smoothedPoints.push(R);
+      }
+      // Add the last point of the original trail to end the smoothed line correctly
+      smoothedPoints.push(eraserTrail[eraserTrail.length - 1]);
+      pointsToDraw = smoothedPoints;
+    }
+
+    for (let i = 0; i < pointsToDraw.length - 1; i++) {
+      const p1 = pointsToDraw[i];
+      const p2 = pointsToDraw[i + 1];
+
+      // p2.time should exist for all points generated by Chaikin or from original trail
+      const ageP2 = now - (p2.time || now); // Fallback to 'now' if time is missing, though it shouldn't
+      const lifeRatio = Math.max(0, (MAX_TRAIL_DURATION - ageP2) / MAX_TRAIL_DURATION);
+      const opacity = 0.3 * lifeRatio * lifeRatio;
+
+      if (opacity < 0.01) continue;
+
+      context.beginPath();
+      context.moveTo(p1.x, p1.y);
+      context.lineTo(p2.x, p2.y);
+      context.strokeStyle = `rgba(180, 180, 180, ${opacity})`;
+      context.lineWidth = trailWidth;
+      context.stroke();
+    }
+    context.restore();
+  }
 }

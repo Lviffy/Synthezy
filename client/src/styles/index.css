@@ -311,6 +311,33 @@ section.toolbar .toolbutton.lock[data-lock="true"] svg {
   transform: scale(1.05);
 }
 
+/* Tool shortcut (number) styling */
+.tool-shortcut {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 9px; /* Smaller font size */
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.4); /* Subtle color */
+  background-color: rgba(255, 255, 255, 0.7); /* Slight background for readability */
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+section.toolbar .toolbutton:hover .tool-shortcut {
+  color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+section.toolbar .toolbutton.selected .tool-shortcut,
+section.toolbar .toolbutton.lock[data-lock="true"] .tool-shortcut {
+  color: rgba(255, 255, 255, 0.7); /* White shortcut on selected/locked */
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+
 /* Special styling for AI tool button */
 section.toolbar .toolbutton.ai {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -346,6 +373,13 @@ section.toolbar .toolbutton.ai svg {
 section.toolbar .toolbutton.ai .tool-number {
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Update AI tool shortcut to match new style */
+section.toolbar .toolbutton.ai .tool-shortcut {
+  color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(0, 0, 0, 0.2);
+  text-shadow: none; /* Remove text shadow if not needed or adjust */
 }
 
 /* AI Tool Panel - ensure all interactions work */
@@ -2081,7 +2115,7 @@ section.styleOptions {
   box-shadow: 
     0 12px 32px rgba(0, 0, 0, 0.12),
     0 6px 16px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    inset 0  1px 0 rgba(255, 255, 255, 0.9);
   padding: 16px;
   z-index: 1000;
   animation: colorPickerFadeIn 0.2s ease-out;

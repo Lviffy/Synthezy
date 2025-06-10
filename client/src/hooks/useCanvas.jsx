@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
+import rough from "roughjs"; // Add this import
 import { useAppContext } from "../provider/AppStates";
 import useDimension from "./useDimension";
 import { lockUI } from "../helper/ui";
@@ -9,6 +10,7 @@ import {
   drawMultiSelection,
   cornerCursor,
   inSelectedCorner,
+  drawEraser, // Import drawEraser
 } from "../helper/canvas";
 import {
   adjustCoordinates,
@@ -30,8 +32,10 @@ import {
   saveElements,
   updateElement,
   uploadElements,
+  isWithinElement, // Add this import
 } from "../helper/element";
 import useKeys from "./useKeys";
+import { PEN_TYPES, PEN_PROPERTIES } from "../global/penStyles"; // Added import
 
 export default function useCanvas() {  const {
     selectedTool,
@@ -49,7 +53,7 @@ export default function useCanvas() {  const {
     scaleOffset,
     setScaleOffset,
     lockTool,
-    style,
+    style, // General style for shapes
     selectedElement,
     setSelectedElement,
     selectedElements,
@@ -67,6 +71,8 @@ export default function useCanvas() {  const {
     currentMousePosition,
     setCurrentMousePosition,
     session,
+    penProperties, // Added from AppContext
+    selectedPen,   // Added from AppContext
   } = useAppContext();
   const canvasRef = useRef(null);
   const lastUpdateTime = useRef(0);
@@ -80,6 +86,10 @@ export default function useCanvas() {  const {
   const [resizeOldDementions, setResizeOldDementions] = useState(null)
   const [isDrawing, setIsDrawing] = useState(false);
   
+  // Eraser trail state
+  const [eraserTrail, setEraserTrail] = useState([]);
+  const eraserTrailRef = useRef([]); // Ref to keep track of trail points for animation
+
   // Smooth translation state for hand tool
   const [smoothTranslate, setSmoothTranslate] = useState({ x: 0, y: 0 });
   const translateAnimationRef = useRef(null);
@@ -202,6 +212,16 @@ export default function useCanvas() {  const {
   const handleMouseDown = (event) => {
     const { clientX, clientY } = mousePosition(event);
     setCurrentMousePosition({ x: clientX, y: clientY });
+
+    if (selectedTool === "eraser") {
+      setAction("erasing");
+      // Start eraser trail
+      eraserTrailRef.current = [{ x: clientX, y: clientY, time: Date.now() }];
+      setEraserTrail(eraserTrailRef.current);
+      // No element is created for eraser, it acts directly on existing elements
+      return;
+    }
+
       // Handle text tool click-to-add (PRIORITY - before lockUI)
     if (selectedTool === "text") {
       // Use direct screen coordinates for fixed positioning
@@ -367,24 +387,33 @@ export default function useCanvas() {  const {
     // Handle draw tool for freehand drawing
     if (selectedTool === "draw") {
       setIsDrawing(true);
+      
+      const elementProperties = {
+        ...penProperties, // All properties like strokeColor, width, opacity, lineCap, smoothing etc.
+        penType: selectedPen, // Explicitly store the type of pen used for this element
+      };
+
       const element = createElement(
         clientX,
         clientY,
         clientX,
         clientY,
-        style,
-        selectedTool
+        elementProperties, // Pass the combined pen properties
+        selectedTool // This sets element.tool = "draw"
       );
+      // Add points for freehand drawing
       element.points = [{ x: clientX, y: clientY }];
+      // TODO: Handle Laser pen non-persistence later
       setElements((prevState) => [...prevState, element]);
+
     } else {
-      // Regular shape drawing
+      // Regular shape drawing (uses global style)
       const element = createElement(
         clientX,
         clientY,
         clientX,
         clientY,
-        style,
+        style, 
         selectedTool
       );
       setElements((prevState) => [...prevState, element]);
@@ -411,6 +440,53 @@ export default function useCanvas() {  const {
     // Update current mouse position for paste functionality
     setCurrentMousePosition({ x: clientX, y: clientY });
 
+    if (action === "erasing" && selectedTool === "eraser") {
+      // Add point to eraser trail for animation
+      const currentTime = Date.now();
+      eraserTrailRef.current = [
+        ...eraserTrailRef.current,
+        { x: clientX, y: clientY, time: currentTime },
+      ].filter(p => currentTime - p.time < 500); // Keep points for 500ms
+      setEraserTrail(eraserTrailRef.current);
+
+      // Perform erasing logic
+      const elementsToKeep = [];
+      let wasElementErased = false;
+      elements.forEach(element => {
+        // For 'draw' elements, check if any point is near the eraser path
+        if (element.tool === "draw" && element.points && element.points.length > 0) {
+          const distanceToEraser = element.points.some(p => 
+            Math.sqrt(Math.pow(p.x - clientX, 2) + Math.pow(p.y - clientY, 2)) < (element.strokeWidth / 2 + 10) // 10 is eraser radius
+          );
+          if (distanceToEraser) {
+            wasElementErased = true;
+            // Potentially, for partial erase of drawn lines, one might modify points here
+            // For now, we erase the whole element if any part is touched
+          } else {
+            elementsToKeep.push(element);
+          }
+        } else {
+          // For other shapes, check if eraser is within their bounding box
+          // More precise collision (e.g. isWithinElement) can be used here
+          const { x1, y1, x2, y2 } = element;
+          const eraserRadius = 10; // Effective radius of the eraser
+          const withinX = clientX > Math.min(x1,x2) - eraserRadius && clientX < Math.max(x1,x2) + eraserRadius;
+          const withinY = clientY > Math.min(y1,y2) - eraserRadius && clientY < Math.max(y1,y2) + eraserRadius;
+
+          if (withinX && withinY && isWithinElement(clientX, clientY, element)) { // Use isWithinElement for better accuracy
+            wasElementErased = true;
+          } else {
+            elementsToKeep.push(element);
+          }
+        }
+      });
+
+      if (wasElementErased) {
+        setElements(elementsToKeep);
+      }
+      return; // Prevent other mouse move actions when erasing
+    }
+
     if (selectedElement) {
       setInCorner(
         inSelectedCorner(
@@ -428,19 +504,30 @@ export default function useCanvas() {  const {
     } else {
       setIsInElement(false);
     }    if (action == "draw") {
-      const { id } = elements.at(-1);
+      const element = elements.at(-1); // Get the current element being drawn
+      if (!element) return; // Should not happen if isDrawing is true
+      const { id } = element;
       
       if (selectedTool === "draw" && isDrawing) {
         // Add point to freehand path
-        const element = elements.at(-1);
-        const newPoints = [...element.points, { x: clientX, y: clientY }];
+        // Ensure element.points exists and is an array
+        const currentPoints = element.points || [];
+        const newPoints = [...currentPoints, { x: clientX, y: clientY }];
+        
+        // Update element with new points and adjust bounding box (x2, y2)
+        // The bounding box for 'draw' elements is derived from points in canvas.js,
+        // but x2, y2 can be used for rough culling or initial bounds.
         updateElement(
           id,
-          { points: newPoints, x2: clientX, y2: clientY },
+          { 
+            points: newPoints, 
+            x2: clientX, // Update x2 and y2 to expand the bounding box
+            y2: clientY  // if necessary, though min/max of points is more accurate
+          },
           setElements,
           true
         );
-      } else {
+      } else if (selectedTool !== "draw") { // For regular shapes being drawn
         // Regular shape drawing
         updateElement(
           id,
@@ -598,10 +685,53 @@ export default function useCanvas() {  const {
   };
 
   const handleMouseUp = (event) => {
-    const currentAction = action; // Store current action before resetting
-    
-    // Handle marquee selection before resetting action
-    if (currentAction == "selecting") {      // Finalize marquee selection
+    lockUI(false);
+    setTextInputMode(null); // Clear text input mode on mouse up
+
+    const currentAction = action; // Capture action before it's reset
+    const currentSelectedTool = selectedTool; // Capture selectedTool
+    const currentSelectedPen = selectedPen; // Capture selectedPen
+
+    if (currentAction === "erasing" && selectedTool === "eraser") {
+      // Clear eraser trail on mouse up
+      eraserTrailRef.current = [];
+      setEraserTrail([]);
+      if (!lockTool) {
+        setSelectedTool("selection");
+      }
+      setAction("none");
+      return;
+    }
+
+    if (currentAction === "draw") {
+      const drawnElement = elements.at(-1);
+
+      if (currentSelectedTool === "draw" && currentSelectedPen === PEN_TYPES.LASER) {
+        if (drawnElement && drawnElement.id && drawnElement.tool === "draw" && drawnElement.penType === PEN_TYPES.LASER) {
+          const duration = drawnElement.laserDuration || 
+                           (penProperties && penProperties[PEN_PROPERTIES.LASER_DURATION]) || 
+                           2000; // Fallback duration
+          
+          setTimeout(() => {
+            setElements((prevElements) =>
+              prevElements.filter((el) => el.id !== drawnElement.id)
+            );
+          }, duration);
+        }
+      }
+      
+      // If not locked, switch back to selection tool
+      if (!lockTool) {
+        setSelectedTool("selection");
+        // Don't select the element if it's a laser pen stroke that will vanish
+        if (currentSelectedTool === "draw" && currentSelectedPen === PEN_TYPES.LASER) {
+          setSelectedElement(null);
+        } else if (drawnElement) {
+          setSelectedElement(drawnElement);
+        }
+      }
+    } else if (currentAction === "selecting") {
+      // Finalize marquee selection
       if (selectionBounds) {
         const selectedInBounds = getElementsInSelectionBounds(elements, selectionBounds);
         if (event.shiftKey) {
@@ -764,62 +894,93 @@ export default function useCanvas() {  const {
     }
   }, [debouncedZoom]);
   useLayoutEffect(() => {
+    if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
 
-    // Use center-based positioning for scale offset calculation
-    const zoomPositionX = 2;
-    const zoomPositionY = 2;
-
-    const scaledWidth = canvas.width * scale;
-    const scaledHeight = canvas.height * scale;    const scaleOffsetX = (scaledWidth - canvas.width) / zoomPositionX;
-    const scaleOffsetY = (scaledHeight - canvas.height) / zoomPositionY;
-
-    // Only update scaleOffset if it has actually changed to prevent infinite loops
-    if (Math.abs(scaleOffset.x - scaleOffsetX) > 0.001 || Math.abs(scaleOffset.y - scaleOffsetY) > 0.001) {
-      setScaleOffset({ x: scaleOffsetX, y: scaleOffsetY });
-    }
-
+    // Clear canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Apply scale and translate
     context.save();
+    context.scale(scale, scale);
+    context.translate(translate.x - scaleOffset.x / scale, translate.y - scaleOffset.y / scale);
 
-    context.translate(
-      translate.x * scale - scaleOffsetX,
-      translate.y * scale - scaleOffsetY
-    );    context.scale(scale, scale);    let focusedElement = null;    if (elements && Array.isArray(elements) && elements.length > 0) {
-      // Additional safety check to prevent race conditions during heavy dragging
-      const safeElements = elements.filter(element => element && element.id);
-      safeElements.forEach((element) => {
-        try {
-          // Use regular draw function for all elements during rendering
-          draw(element, context);
-          if (element.id == selectedElement?.id) focusedElement = element;
-        } catch (error) {
-          console.warn('Error drawing element:', element, error);
+    // Draw elements
+    if (elements && Array.isArray(elements)) {
+      elements.forEach((element) => {
+        if (element) { // Add a null check for element
+          draw(element, context, rough.canvas(canvas), style, scale, element.tool === "text");
         }
       });
-    }const pd = minmax(10 / scale, [0.5, 50]);
-      // Draw multi-selection indicators for multiple selected elements
-    if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1) {
-      try {
-        const safeSelectedElements = selectedElements.filter(el => el && el.id);
-        if (safeSelectedElements.length > 1) {
-          drawMultiSelection(safeSelectedElements, context, scale);
-        }
-      } catch (error) {
-        console.warn('Error drawing multi-selection:', selectedElements, error);
+    }
+
+    // Draw eraser trail and indicator if eraser tool is active
+    if (selectedTool === "eraser") {
+      // Pass currentMousePosition for the indicator, and eraserTrail for the trail
+      drawEraser(context, eraserTrail, currentMousePosition, scale);
+    }
+
+    // Draw selection focus
+    if (selectedElement) {
+      const element = getElementById(selectedElement.id, elements);
+      if (element) { // Ensure element exists before drawing focus
+        drawFocuse(element, context, padding, scale);
       }
     }
-    
-    // Draw focus indicators for the primary selected element
-    if (focusedElement != null) {
-      drawFocuse(focusedElement, context, pd, scale);
+
+    // Draw multi-selection bounds and focus
+    if (selectedElements && selectedElements.length > 0) {
+      drawMultiSelection(selectedElements, context, padding, scale, elements);
     }
-    setPadding(pd);
+
+    // Draw marquee selection rectangle
+    if (action === "selecting" && selectionBounds) {
+      context.strokeStyle = "rgba(0, 0, 255, 0.5)";
+      context.lineWidth = 1 / scale;
+      context.strokeRect(
+        selectionBounds.x1,
+        selectionBounds.y1,
+        selectionBounds.x2 - selectionBounds.x1,
+        selectionBounds.y2 - selectionBounds.y1
+      );
+    }
 
     context.restore();
-  }, [elements, selectedElement, scale, translate, dimension]);
+
+    // Set cursor style
+    if (selectedTool === "eraser") {
+      canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21H7Z"/><path d="M22 21H7"/></svg>') 12 12, auto`;
+    } else if (inCorner) {
+      canvas.style.cursor = cornerCursor(inCorner.slug);
+    } else if (action == "translate" || keys.has(" ") || selectedTool == "hand") {
+      canvas.style.cursor = "grabbing";
+    } else if (selectedTool == "selection" && isInElement) {
+      canvas.style.cursor = "move";
+    } else if (selectedTool == "text") {
+      canvas.style.cursor = "text";
+    } else {
+      canvas.style.cursor = "default";
+    }
+  }, [
+    elements,
+    selectedElement,
+    selectedElements,
+    selectionBounds,
+    action,
+    scale,
+    translate,
+    scaleOffset,
+    padding,
+    style,
+    inCorner,
+    isInElement,
+    keys,
+    selectedTool,
+    dimension,
+    eraserTrail, // Add eraserTrail as a dependency
+    currentMousePosition // Add currentMousePosition as a dependency
+  ]);
   useEffect(() => {    const keyDownFunction = (event) => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const prevent = () => event.preventDefault();
@@ -1061,6 +1222,8 @@ export default function useCanvas() {  const {
       );
     } else if (isInElement) {
       document.documentElement.style.setProperty("--canvas-cursor", "move");
+    } else if (selectedTool === "eraser") {
+      document.documentElement.style.setProperty("--canvas-cursor", "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 576 512\"><path fill=\"currentColor\" d=\"M290.7 57.4L57.4 290.7c-25 25-25 65.5 0 90.5l80 80c12 12 28.3 18.7 45.3 18.7H512c17.7 0 32-14.3 32-32s-14.3-32-32-32H387.9l130.7-130.6c25-25 25-65.5 0-90.5L381.3 57.4c-25-25-65.5-25-90.5 0zm6.7 358.6H182.6l-80-80 124.7-124.7 137.4 137.4-67.3 67.3z\"/></svg>') 12 12, auto"); // 12 12 is hotspot
     } else {
       document.documentElement.style.setProperty("--canvas-cursor", "default");
     }

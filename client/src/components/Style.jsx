@@ -12,9 +12,10 @@ import {
 import { useAppContext } from "../provider/AppStates";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, EDGE_STYLES, FILL_PATTERNS } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
+import { PEN_TYPES, DEFAULT_PEN_STYLES, LINE_CAP_OPTIONS, STROKE_WIDTH_RANGE, OPACITY_RANGE } from "../global/penStyles"; // Added pen style imports
 
 
-export default function Style({ selectedElement, selectedElements = [] }) {  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle, selectedTool } =
+export default function Style({ selectedElement, selectedElements = [] }) {  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle, selectedTool, selectedPen, setSelectedPen, penProperties, setPenProperties } =
     useAppContext();  const [elementStyle, setElementStyle] = useState({
     fill: selectedElement?.fill,
     strokeWidth: selectedElement?.strokeWidth,
@@ -59,7 +60,167 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
   const isMultiSelection = selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1;
   const hasSelection = selectedElement || isMultiSelection;
 
-  if (!hasSelection) return;
+  if (!hasSelection && selectedTool !== 'draw') return null; // Keep property box if draw tool is selected
+
+  // If draw tool is selected, show pen properties
+  if (selectedTool === 'draw') {
+    return (
+      <section className="styleOptions">
+        <div className="properties-content">
+          <div className="properties-section">
+            <h4 className="section-title">Pen Properties</h4>
+            {/* Pen Type Selector */}
+            <div className="property-group">
+              <label className="property-label">Pen Type</label>
+              <select 
+                value={selectedPen}
+                onChange={(e) => {
+                  const newPen = e.target.value;
+                  setSelectedPen(newPen);
+                  setPenProperties(DEFAULT_PEN_STYLES[newPen]);
+                }}
+                className="property-select" // Add a class for styling if needed
+              >
+                {Object.values(PEN_TYPES).map(penType => (
+                  <option key={penType} value={penType}>
+                    {DEFAULT_PEN_STYLES[penType]?.label || penType}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Stroke Color for Pen */}
+            <div className="property-group">
+              <label className="property-label">Stroke Color</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="color-palette" style={{ flex: 1 }}>
+                  {STROKE_COLORS.map((color, index) => (
+                    <button
+                      type="button"
+                      title={color}
+                      style={{ "--color": color }}
+                      key={index}
+                      className={
+                        "color-swatch" +
+                        (color === penProperties.strokeColor ? " selected" : "")
+                      }
+                      onClick={() => {
+                        setPenProperties(prev => ({ ...prev, strokeColor: color }));
+                      }}
+                    />                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="color-picker-button"
+                  onClick={() => openColorPicker('stroke')} // Assuming this works for pen stroke too
+                  title="Choose custom stroke color"
+                />
+              </div>
+            </div>
+
+            {/* Stroke Width for Pen */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Stroke Width</span>
+                <span className="property-value">{penProperties.strokeWidth}px</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  className="property-slider"
+                  min={STROKE_WIDTH_RANGE.min}
+                  max={STROKE_WIDTH_RANGE.max}
+                  value={penProperties.strokeWidth}
+                  step={STROKE_WIDTH_RANGE.step}
+                  style={{
+                    '--slider-progress': `${((penProperties.strokeWidth - STROKE_WIDTH_RANGE.min) / (STROKE_WIDTH_RANGE.max - STROKE_WIDTH_RANGE.min)) * 100}%`
+                  }}
+                  onChange={({ target }) => {
+                    const strokeWidth = minmax(+target.value, [STROKE_WIDTH_RANGE.min, STROKE_WIDTH_RANGE.max]);
+                    setPenProperties(prev => ({ ...prev, strokeWidth }));
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Opacity for Pen */}
+            <div className="property-group">
+              <label className="property-label">
+                <span>Opacity</span>
+                <span className="property-value">{Math.round(penProperties.opacity * 100)}%</span>
+              </label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  min={OPACITY_RANGE.min * 100} // Scale to 0-100 for slider
+                  max={OPACITY_RANGE.max * 100}
+                  className="property-slider"
+                  value={penProperties.opacity * 100}
+                  step={OPACITY_RANGE.step * 100}
+                  style={{
+                    '--slider-progress': `${penProperties.opacity * 100}%`
+                  }}
+                  onChange={({ target }) => {
+                    const opacity = minmax(+target.value / 100, [OPACITY_RANGE.min, OPACITY_RANGE.max]);
+                    setPenProperties(prev => ({ ...prev, opacity }));
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Line Cap for Pen */}
+            <div className="property-group">
+              <label className="property-label">Line Cap</label>
+              <div className="button-group">
+                {LINE_CAP_OPTIONS.map(option => (
+                  <button
+                    key={option.slug}
+                    type="button"
+                    title={option.title}
+                    className={
+                      "style-button" +
+                      (option.slug === penProperties.lineCap ? " selected" : "")
+                    }
+                    onClick={() => setPenProperties(prev => ({ ...prev, lineCap: option.slug }))
+                    }
+                  >
+                    {option.title} {/* Or an icon */}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Laser Pen Specific: Duration */}
+            { selectedPen === PEN_TYPES.LASER && 
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Laser Duration (ms)</span>
+                  <span className="property-value">{penProperties.laserDuration}ms</span>
+                </label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min={500} 
+                    max={5000} 
+                    className="property-slider"
+                    value={penProperties.laserDuration}
+                    step={100}
+                    style={{
+                      '--slider-progress': `${((penProperties.laserDuration - 500) / (5000 - 500)) * 100}%`
+                    }}
+                    onChange={({ target }) => {
+                      setPenProperties(prev => ({ ...prev, laserDuration: +target.value }));
+                    }}
+                  />
+                </div>
+              </div>
+            }
+
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="styleOptions">      {/* Header Section */}
