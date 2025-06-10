@@ -21,8 +21,7 @@ export default function ToolBar() {
                   (selectedTool === tool.slug ? " selected" : "")
                 }
                 data-lock={lockTool}
-                data-tool={tool.slug}
-                onClick={() => tool.toolAction(tool.slug)}
+                data-tool={tool.slug}                onClick={() => tool.toolAction(tool.slug)}
                 title={tool.title}
                 aria-label={tool.title}
                 aria-pressed={selectedTool === tool.slug}

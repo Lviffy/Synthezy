@@ -470,90 +470,85 @@ export function draw(element, context) {
     strokeLineDash: strokeLineDash,
     seed: seed, // Use consistent numeric seed for stable appearance
   };
-
   // Draw the shape using rough.js (only if the tool is a valid drawing tool)
   if (shapes[tool]) {
     shapes[tool](x1, y1, x2, y2, roughCanvas, options, element);
   }
   
-  // Handle special rendering for text and image elements
-  if (tool === "text" && element.text) {
+  // Handle text rendering for ALL elements that have text content (not just text tool)
+  if (element.text && element.text.trim() && (tool === "text" || tool === "rectangle" || tool === "circle" || tool === "diamond")) {
     // Validate coordinates and font size before rendering
     if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2)) {
       return; // Skip rendering invalid coordinates
     }
     
-    const fontSize = element.fontSize || 24;
+    // Calculate text rendering properties
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+    const centerX = x1 + (x2 - x1) / 2;
+    const centerY = y1 + (y2 - y1) / 2;
+    
+    // Determine font size based on element size (responsive text)
+    let fontSize = 16;
+    if (tool === "text") {
+      fontSize = element.fontSize || 24;
+    } else {
+      // For shapes, calculate responsive font size
+      fontSize = Math.max(10, Math.min(24, Math.min(width, height) / 8));
+    }
+    
     if (!isFinite(fontSize) || fontSize <= 0 || fontSize > 1000) {
       return; // Skip rendering invalid font size
     }
     
-    const textWidth = Math.abs(x2 - x1);
-    const textHeight = Math.abs(y2 - y1);
-    
-    // Always render text, even if the box is very small
-    // The text may overflow the box boundaries, which is intentional
-    
-    // Render actual text with wrapping
+    // Render text centered in the shape
     context.save();
     try {
-      // Ensure font family is valid and fallback to Arial if needed
       const fontFamily = element.fontFamily || 'Arial, sans-serif';
-      // Clamp font size to ensure it's always valid
       const clampedFontSize = Math.max(6, Math.min(300, fontSize));
       context.font = `${clampedFontSize}px ${fontFamily}`;
-      context.fillStyle = rgba(strokeColor, opacity);
-      context.textBaseline = 'top';
+      
+      // Use contrasting text color for shapes
+      if (tool === "text") {
+        context.fillStyle = rgba(strokeColor, opacity);
+      } else {
+        // For shapes, use white text if shape is dark, black text if shape is light
+        const isDarkShape = fill !== "transparent" && isColorDark(fill);
+        context.fillStyle = isDarkShape ? "white" : "black";
+      }
+      
+      context.textAlign = tool === "text" ? "left" : "center";
+      context.textBaseline = tool === "text" ? "top" : "middle";
       
       const lineHeight = clampedFontSize * 1.2;
       
-      // Split text by explicit line breaks first
-      const paragraphs = element.text.split('\n');
-      let currentY = y1;
-    
-    paragraphs.forEach((paragraph, paragraphIndex) => {
-      if (paragraph.trim() === '') {
-        // Empty line - just add spacing (always render, don't clip)
-        currentY += lineHeight;
-        return;
-      }
+      // Split text by line breaks
+      const lines = element.text.split('\n');
+      const totalTextHeight = lines.length * lineHeight;
       
-      // Wrap text within the bounding box width
-      const words = paragraph.split(' ');
-      let currentLine = '';
+      // Calculate starting Y position for centered text
+      let startY = tool === "text" ? y1 : centerY - totalTextHeight / 2 + lineHeight / 2;
       
-      for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
-        const metrics = context.measureText(testLine);
-        
-        if (metrics.width > textWidth && currentLine !== '') {
-          // Current line is too wide, render it and start new line
-          // Always render text, even if it goes beyond box height
-          context.fillText(currentLine, x1, currentY);
-          currentY += lineHeight;
-          currentLine = words[i];
-        } else {
-          currentLine = testLine;
+      lines.forEach((line, index) => {
+        if (line.trim()) {
+          const textX = tool === "text" ? x1 : centerX;
+          const textY = startY + (index * lineHeight);
+          
+          // For shapes, ensure text fits within boundaries
+          if (tool !== "text") {
+            const textWidth = context.measureText(line).width;
+            if (textWidth > width * 0.9) {
+              // If text is too wide, reduce font size and re-render
+              const scaleFactor = (width * 0.9) / textWidth;
+              const newFontSize = Math.max(8, clampedFontSize * scaleFactor);
+              context.font = `${newFontSize}px ${fontFamily}`;
+            }
+          }
+          
+          context.fillText(line, textX, textY);
         }
-        
-        // Handle long single words that don't fit in width
-        if (currentLine && context.measureText(currentLine).width > textWidth) {
-          // For very long words, render them anyway (they'll overflow horizontally)
-          // This ensures no text is ever hidden due to width constraints
-          context.fillText(currentLine, x1, currentY);
-          currentY += lineHeight;
-          currentLine = '';
-          continue;
-        }
-      }
+      });
       
-      // Render the last line (always render, no height clipping)
-      if (currentLine) {
-        context.fillText(currentLine, x1, currentY);
-        currentY += lineHeight;
-      }
-    });
-    
     } catch (error) {
       console.warn("Error rendering text:", error);
     } finally {
@@ -669,6 +664,42 @@ export function draw(element, context) {
       context.restore();
     }
   }
+}
+
+// Helper function to determine if a color is dark
+function isColorDark(color) {
+  if (!color || color === "transparent") return false;
+  
+  // Handle hex colors
+  if (color.startsWith('#')) {
+    let hex = color.substring(1);
+    // Convert 3-digit hex to 6-digit
+    if (hex.length === 3) {
+      hex = hex.split('').map(char => char + char).join('');
+    }
+    
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance < 0.5;
+  }
+  
+  // Handle rgb colors
+  if (color.startsWith('rgb')) {
+    const matches = color.match(/\d+/g);
+    if (matches && matches.length >= 3) {
+      const r = parseInt(matches[0]);
+      const g = parseInt(matches[1]);
+      const b = parseInt(matches[2]);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance < 0.5;
+    }
+  }
+  
+  return false;
 }
 
 function rgba(color, opacity) {

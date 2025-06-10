@@ -12,6 +12,7 @@ import {
   Text,
   Image,
   StickyNote,
+  AIBrain,
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { getElementById, minmax } from "../helper/element";
@@ -60,9 +61,12 @@ export function AppContextProvider({ children }) {
     opacity: 100,
     sloppiness: 1,
     cornerStyle: "rounded",
-  });const [showGrid, setShowGrid] = useState(true);
+  });  const [showGrid, setShowGrid] = useState(true);
   const [textInputMode, setTextInputMode] = useState(null);
   const [isZooming, setIsZooming] = useState(false);
+  
+  // AI Panel state
+  const [showAIPanel, setShowAIPanel] = useState(false);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null);
@@ -288,16 +292,17 @@ export function AppContextProvider({ children }) {
       lastScale: 1,
       initialTouches: null
     });
-  };
-
-  const toolAction = (slug) => {
+  };  const toolAction = (slug) => {
     if (slug == "lock") {
       setLockTool((prevState) => !prevState);
       return;
     }
+    if (slug === "ai") {
+      setShowAIPanel((prevState) => !prevState);
+      return;
+    }
     setSelectedTool(slug);
   };
-
   const tools = [
     [
       {
@@ -371,8 +376,14 @@ export function AppContextProvider({ children }) {
         title: "Sticky Note",
         toolAction,
       },
+      {
+        slug: "ai",
+        icon: AIBrain,
+        title: "AI Diagram Generator • Generate diagrams from text descriptions • Powered by AI",
+        toolAction,
+      },
     ],
-  ];  useEffect(() => {
+  ];useEffect(() => {
     if (session) {
       // Set up socket listeners for collaboration
       const handleSetElements = (data) => {
@@ -389,8 +400,7 @@ export function AppContextProvider({ children }) {
       };
     }
   }, [session, setElements]);
-  return (
-    <AppContext.Provider
+  return (    <AppContext.Provider
       value={{        action,
         setAction,
         tools,
@@ -424,6 +434,8 @@ export function AppContextProvider({ children }) {
         showGrid,
         setShowGrid,        textInputMode,
         setTextInputMode,
+        showAIPanel,
+        setShowAIPanel,
         contextMenu,
         setContextMenu,
         currentMousePosition,

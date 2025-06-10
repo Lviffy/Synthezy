@@ -7,9 +7,10 @@ import Menu from "./Menu";
 import Collaboration from "./Collaboration";
 import Credits from "./Credits";
 import ColorPickerOverlay from "./ColorPickerOverlay";
+import AIToolPanel from "./AIToolPanel";
 
 export default function Ui() {
-  const { selectedElement, selectedElements, selectedTool, style } = useAppContext();
+  const { selectedElement, selectedElements, selectedTool, style, showAIPanel } = useAppContext();
 
   return (
     <main className="ui">
@@ -17,8 +18,13 @@ export default function Ui() {
         <Menu />
         <ToolBar />
         <Collaboration />
-      </header>      {(!["selection", "hand"].includes(selectedTool) || selectedElement || (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0)) && (
-        <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />      )}      
+      </header>
+      
+      {(!["selection", "hand"].includes(selectedTool) || selectedElement || (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0)) && (
+        <Style selectedElement={selectedElement || style} selectedElements={selectedElements} />
+      )}      {/* AI Tool Panel */}
+      {showAIPanel && <AIToolPanel />}
+      
       <footer>
         <div className="footer-left">
           <Zoom />

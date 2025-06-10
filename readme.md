@@ -44,11 +44,19 @@
 
 ---
 
-### 3. AI-Powered Enhancements (Pro)
-**Description**: AI tools to boost creativity, reduce clutter, and provide smart assistance.
+### 3. AI-Powered Diagram Generation ✨
+**Description**: Transform text descriptions into visual diagrams using advanced AI.
 
-- **Summarize Board**: Generate concise summaries of the board contents.
-- **Text to Diagram**: Turn text instructions into structured visuals like flowcharts and trees.
+- **🤖 AI Diagram Generator**: Generate flowcharts, mind maps, org charts, and more from natural language
+- **🧠 Smart Sticky Notes**: Get intelligent content suggestions based on note titles  
+- **📊 Multiple Diagram Types**: Flowcharts, mind maps, process diagrams, organizational charts, timelines
+- **⚡ Real-time Generation**: Instant diagram creation with proper element positioning
+- **🎨 Style Integration**: Generated elements inherit your current style settings
+- **🔄 Fallback Support**: Works with mock data when no API key is provided
+
+> **Getting Started**: Add your Google Gemini API key to `.env` and click the 🤖 button in the toolbar!
+> 
+> See [AI_FEATURES.md](./client/AI_FEATURES.md) for detailed documentation.
 - **Brainstorm Helper**: Generate idea bubbles or suggestions based on a prompt.
 - **Auto-Layout**: Organize scattered elements into clean structures.
 - **Explain Canvas**: Ask contextual questions (e.g., "What is this process about?") and get intelligent answers.
