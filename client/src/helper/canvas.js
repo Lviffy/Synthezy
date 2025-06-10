@@ -268,8 +268,24 @@ export function distance(a, b) {
 export function getFocuseDemention(element, padding) {
   const { x1, y1, x2, y2, tool } = element;
 
-  if (tool == "line" || tool == "arrow")
-    return { fx: x1, fy: y1, fw: x2, fh: y2 };
+  if (tool == "line" || tool == "arrow") {
+    // For lines and arrows, calculate proper bounding box dimensions
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    
+    // Add minimum dimensions for very short lines/arrows to ensure they're selectable
+    const width = Math.max(maxX - minX, 10);
+    const height = Math.max(maxY - minY, 10);
+    
+    return { 
+      fx: minX - padding, 
+      fy: minY - padding, 
+      fw: width + padding * 2, 
+      fh: height + padding * 2 
+    };
+  }
 
   // For draw tool with points, calculate bounding box from points
   if (tool === "draw" && element.points && element.points.length > 1) {
@@ -307,18 +323,20 @@ export function getFocuseCorners(element, padding, position) {
   let { fx, fy, fw, fh } = getFocuseDemention(element, padding);
 
   if (element.tool == "line" || element.tool == "arrow") {
+    // For lines and arrows, use the actual start and end points for corner positions
+    const { x1, y1, x2, y2 } = element;
     return {
       line: { fx, fy, fw, fh },
       corners: [
         {
           slug: "l1",
-          x: fx - position,
-          y: fy - position,
+          x: x1 - position,
+          y: y1 - position,
         },
         {
           slug: "l2",
-          x: fw - position,
-          y: fh - position,
+          x: x2 - position,
+          y: y2 - position,
         },
       ],
     };
@@ -394,7 +412,23 @@ export function drawFocuse(element, context, padding, scale) {
   context.strokeStyle = "#211C6A";
   context.fillStyle = "#EEF5FF";
 
-  if (element.tool != "line" && element.tool != "arrow") {
+  if (element.tool == "line" || element.tool == "arrow") {
+    // For lines and arrows, draw a highlighted line along the actual path
+    context.save();
+    context.lineWidth = Math.max(3 / scale, lineWidth * 2); // Slightly thicker than normal
+    context.strokeStyle = "#211C6A";
+    context.setLineDash([]);
+    context.globalAlpha = 0.7;
+    
+    context.beginPath();
+    context.moveTo(element.x1, element.y1);
+    context.lineTo(element.x2, element.y2);
+    context.stroke();
+    context.closePath();
+    
+    context.restore();
+  } else {
+    // For other shapes, draw the bounding box
     context.beginPath();
     context.rect(fx, fy, fw, fh);
     context.setLineDash([0, 0]);
@@ -403,6 +437,7 @@ export function drawFocuse(element, context, padding, scale) {
     round = 3 / scale;
   }
 
+  // Draw corner handles for resizing
   context.beginPath();
   corners.forEach((corner) => {
     context.roundRect(corner.x, corner.y, square, square, round);

@@ -394,9 +394,14 @@ export default function useCanvas() {  const {
       // Smart throttling: more responsive during collaboration, balanced for solo use
       const now = performance.now();
       const isCollaborating = !!session;
-      const throttleInterval = isCollaborating ? 8 : 16; // ~125fps for collaboration, ~60fps for solo
+      const throttleInterval = isCollaborating ? 8 : 12; // Faster throttling for more responsive dragging
       
-      if (action === "move" && now - lastUpdateTime.current < throttleInterval) {
+      // Reduce throttling during move operations for smoother dragging
+      const isMoving = action === "move";
+      const moveThrottleInterval = isCollaborating ? 4 : 8;
+      const currentThrottle = isMoving ? moveThrottleInterval : throttleInterval;
+      
+      if (now - lastUpdateTime.current < currentThrottle) {
         return;
       }
       lastUpdateTime.current = now;
@@ -433,7 +438,6 @@ export default function useCanvas() {  const {
           id,
           { points: newPoints, x2: clientX, y2: clientY },
           setElements,
-          elements,
           true
         );
       } else {
@@ -442,7 +446,6 @@ export default function useCanvas() {  const {
           id,
           { x2: clientX, y2: clientY },
           setElements,
-          elements,
           true
         );
       }
@@ -452,10 +455,11 @@ export default function useCanvas() {  const {
         ...prev,
         x2: clientX,
         y2: clientY
-      }));    } else if (action == "move") {      if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1 && initialSelectedElements && Array.isArray(initialSelectedElements) && initialSelectedElements.length > 0) {
-        // Multi-element movement: calculate delta from initial mouse position
+      }));    } else if (action == "move") {      if (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1 && initialSelectedElements && Array.isArray(initialSelectedElements) && initialSelectedElements.length > 0) {        // Multi-element movement: calculate delta from initial mouse position
         const deltaX = clientX - mouseAction.x;
-        const deltaY = clientY - mouseAction.y;        // Batch update all selected elements at once to prevent race conditions
+        const deltaY = clientY - mouseAction.y;
+
+        // Batch update all selected elements at once to prevent race conditions
         setElements((prevState) => {
           // Additional safety check to prevent crashes during heavy dragging
           if (!prevState || !Array.isArray(prevState)) {
@@ -467,12 +471,18 @@ export default function useCanvas() {  const {
             
             const initialElement = initialSelectedElements.find(init => init && init.id === element.id);
             if (initialElement) {
+              // Ensure coordinates are valid numbers
+              const validX1 = isFinite(initialElement.x1) ? initialElement.x1 : element.x1;
+              const validY1 = isFinite(initialElement.y1) ? initialElement.y1 : element.y1;
+              const validX2 = isFinite(initialElement.x2) ? initialElement.x2 : element.x2;
+              const validY2 = isFinite(initialElement.y2) ? initialElement.y2 : element.y2;
+              
               const updatedElement = {
                 ...element,
-                x1: initialElement.x1 + deltaX,
-                y1: initialElement.y1 + deltaY,
-                x2: initialElement.x2 + deltaX,
-                y2: initialElement.y2 + deltaY
+                x1: validX1 + deltaX,
+                y1: validY1 + deltaY,
+                x2: validX2 + deltaX,
+                y2: validY2 + deltaY
               };
               
               // For draw tool elements, also move all points in the drawing path
@@ -487,19 +497,23 @@ export default function useCanvas() {  const {
             }
             return element;
           });
-        });
-
-        // Update selectedElements positions in real-time during drag to clear past position blue marks
+        });        // Update selectedElements positions in real-time during drag to clear past position blue marks
         setSelectedElements(prevSelected => 
           prevSelected.map(selectedEl => {
             const initialElement = initialSelectedElements.find(init => init && init.id === selectedEl.id);
             if (initialElement) {
+              // Ensure coordinates are valid numbers
+              const validX1 = isFinite(initialElement.x1) ? initialElement.x1 : selectedEl.x1;
+              const validY1 = isFinite(initialElement.y1) ? initialElement.y1 : selectedEl.y1;
+              const validX2 = isFinite(initialElement.x2) ? initialElement.x2 : selectedEl.x2;
+              const validY2 = isFinite(initialElement.y2) ? initialElement.y2 : selectedEl.y2;
+              
               const updatedSelectedElement = {
                 ...selectedEl,
-                x1: initialElement.x1 + deltaX,
-                y1: initialElement.y1 + deltaY,
-                x2: initialElement.x2 + deltaX,
-                y2: initialElement.y2 + deltaY
+                x1: validX1 + deltaX,
+                y1: validY1 + deltaY,
+                x2: validX2 + deltaX,
+                y2: validY2 + deltaY
               };
               
               // For draw tool elements, also move all points in the selected element
@@ -532,7 +546,6 @@ export default function useCanvas() {  const {
             element.id,
             movedElement,
             setElements,
-            elements,
             true
           );
         }
@@ -570,7 +583,7 @@ export default function useCanvas() {  const {
       updateElement(
         s_element.id,
         resizeValue(resizeCorner, resizeType, clientX, clientY, padding, s_element, mouseAction, resizeOldDementions),
-        setElements,        elements,
+        setElements,
         true
       );
     }
@@ -650,14 +663,13 @@ export default function useCanvas() {  const {
             lastElement.id,
             { x1: minX, y1: minY, x2: maxX, y2: maxY },
             setElements,
-            elements,
-            false
+            true
           );
         }      } else {
         // Regular shape drawing
         const lastElement = elements.at(-1);
         const { id, x1, y1, x2, y2 } = adjustCoordinates(lastElement);
-        updateElement(id, { x1, x2, y1, y2 }, setElements, elements, false);
+        updateElement(id, { x1, x2, y1, y2 }, setElements, /* elements, */ false);
       }
       
       if (!lockTool) {
@@ -668,7 +680,7 @@ export default function useCanvas() {  const {
       const { id, x1, y1, x2, y2 } = adjustCoordinates(
         getElementById(selectedElement.id, elements)
       );
-      updateElement(id, { x1, x2, y1, y2 }, setElements, elements, false);
+      updateElement(id, { x1, x2, y1, y2 }, setElements, /* elements, */ false);
     }
   };  // Momentum scrolling state
   const [momentum, setMomentum] = useState({ x: 0, y: 0 });

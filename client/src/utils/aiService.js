@@ -24,27 +24,27 @@ export class AIService {
    * @returns {Object} Width and height
    */
   calculateElementSize(text, tool) {
-    const baseWidth = 120;
-    const baseHeight = 50;
+    const baseWidth = 60; // Reduced from 120
+    const baseHeight = 25; // Reduced from 50
     
     // Estimate text width (rough calculation)
     const textLength = text ? text.length : 0;
-    const estimatedTextWidth = textLength * 8; // 8px per character approximation
+    const estimatedTextWidth = textLength * 6; // Reduced from 8px per character approximation
     
     let width, height;
     
     switch (tool) {
       case 'rectangle':
-        width = Math.max(baseWidth, estimatedTextWidth + 40);
-        height = text && text.includes('\n') ? baseHeight + 20 : baseHeight;
+        width = Math.max(baseWidth, estimatedTextWidth + 20); // Reduced from +40
+        height = text && text.includes('\n') ? baseHeight + 10 : baseHeight; // Reduced from +20
         break;
       case 'circle':
-        const diameter = Math.max(baseWidth, estimatedTextWidth + 60);
+        const diameter = Math.max(baseWidth, estimatedTextWidth + 30); // Reduced from +60
         width = height = diameter;
         break;
       case 'diamond':
-        width = Math.max(150, estimatedTextWidth + 80);
-        height = Math.max(80, width * 0.6);
+        width = Math.max(75, estimatedTextWidth + 40); // Reduced from 150, +80
+        height = Math.max(40, width * 0.6); // Reduced base height from 80
         break;
       default:
         width = baseWidth;
@@ -95,32 +95,32 @@ export class AIService {
     switch (layoutStyle) {
       case 'compact':
         return {
-          margin: 40,
-          spacing: { x: 100, y: 80 },
+          margin: 20, // Reduced from 40
+          spacing: { x: 50, y: 40 }, // Reduced from { x: 100, y: 80 }
           style: 'compact'
         };
       case 'spacious':
         return {
-          margin: 120,
-          spacing: { x: 220, y: 160 },
+          margin: 60, // Reduced from 120
+          spacing: { x: 110, y: 80 }, // Reduced from { x: 220, y: 160 }
           style: 'spacious'
         };
       case 'creative':
         return {
-          margin: 60 + Math.random() * 40, // 60-100px random margin
+          margin: 30 + Math.random() * 20, // Reduced from 60 + Math.random() * 40
           spacing: { 
-            x: 140 + Math.random() * 80,   // 140-220px random horizontal spacing
-            y: 100 + Math.random() * 80    // 100-180px random vertical spacing
+            x: 70 + Math.random() * 40,   // Reduced from 140 + Math.random() * 80
+            y: 50 + Math.random() * 40    // Reduced from 100 + Math.random() * 80
           },
           style: 'creative',
-          offsetVariation: true,            // Add random offsets to elements
-          colorVariation: true             // Use more varied colors
+          offsetVariation: true,
+          colorVariation: true
         };
       case 'symmetric':
       default:
         return {
-          margin: 80,
-          spacing: { x: 160, y: 120 },
+          margin: 40, // Reduced from 80
+          spacing: { x: 80, y: 60 }, // Reduced from { x: 160, y: 120 }
           style: 'symmetric'
         };
     }
@@ -141,7 +141,7 @@ export class AIService {
       // Apply creative offset if specified
       let xOffset = 0;
       if (layoutParams.offsetVariation) {
-        xOffset = (Math.random() - 0.5) * 60; // Random offset up to ±30px
+        xOffset = (Math.random() - 0.5) * 30; // Reduced from 60 (±30px to ±15px)
       }
       
       element.x1 = centerX - size.width / 2 + xOffset;
@@ -180,10 +180,10 @@ export class AIService {
     }
     
     // Adjust radius based on layout style
-    let radius = 250;
-    if (layoutParams.style === 'compact') radius = 180;
-    else if (layoutParams.style === 'spacious') radius = 320;
-    else if (layoutParams.style === 'creative') radius = 200 + Math.random() * 120; // 200-320px
+    let radius = 125; // Default reduced radius
+    if (layoutParams.style === 'compact') radius = 90; // Reduced from 180
+    else if (layoutParams.style === 'spacious') radius = 160; // Reduced from 320
+    else if (layoutParams.style === 'creative') radius = 100 + Math.random() * 60; // Reduced from 200 + Math.random() * 120
     
     const angleStep = (2 * Math.PI) / branches.length;
     
@@ -192,7 +192,7 @@ export class AIService {
       
       // Add random angle variation for creative layout
       if (layoutParams.style === 'creative') {
-        angle += (Math.random() - 0.5) * 0.3; // ±0.15 radians variation
+        angle += (Math.random() - 0.5) * 0.15; // Reduced from 0.3 (±0.15 to ±0.075 radians)
       }
       
       const size = this.calculateElementSize(branch.text, branch.tool);
@@ -226,8 +226,8 @@ export class AIService {
     
     let currentY = layoutParams.margin;
       levels.forEach((level, levelIndex) => {
-      const baseSpacing = layoutParams.style === 'compact' ? 150 : 
-                         layoutParams.style === 'spacious' ? 250 : 200;
+      const baseSpacing = layoutParams.style === 'compact' ? 75 : 
+                         layoutParams.style === 'spacious' ? 125 : 100; // Reduced from 150/250/200
       const totalWidth = level.length * baseSpacing + (level.length - 1) * layoutParams.spacing.x;
       let currentX = (canvas.width - totalWidth) / 2;
       
@@ -237,7 +237,7 @@ export class AIService {
         // Apply creative offset if specified
         let xOffset = 0;
         if (layoutParams.offsetVariation) {
-          xOffset = (Math.random() - 0.5) * 40; // Random offset up to ±20px
+          xOffset = (Math.random() - 0.5) * 20; // Reduced from 40 (±20px to ±10px)
         }
         
         element.x1 = currentX + xOffset;
@@ -248,7 +248,7 @@ export class AIService {
         currentX += size.width + layoutParams.spacing.x;
       });
       
-      currentY += 100 + layoutParams.spacing.y;
+      currentY += 50 + layoutParams.spacing.y; // Reduced fixed vertical step from 100 to 50
     });
     
     this.updateHierarchicalConnections(connectionElements, levels);
@@ -270,7 +270,7 @@ export class AIService {
       // Apply creative offset if specified
       let yOffset = 0;
       if (layoutParams.offsetVariation) {
-        yOffset = (Math.random() - 0.5) * 60; // Random offset up to ±30px
+        yOffset = (Math.random() - 0.5) * 30; // Reduced from 60 (±30px to ±15px)
       }
       
       element.x1 = currentX;
@@ -422,7 +422,7 @@ export class AIService {
     try {
       const systemPrompt = this.getEnhancedSystemPrompt(diagramType);
       
-      const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+      const fetchResponse = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -443,10 +443,11 @@ export class AIService {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }      const data = await response.json();
-      const parsedElements = this.parseAIResponse(data, diagramType);
+      if (!fetchResponse.ok) {
+        throw new Error(`API request failed: ${fetchResponse.status} ${fetchResponse.statusText}`);
+      }      const data = await fetchResponse.json();
+      // Pass the original user prompt to parseAIResponse
+      const parsedElements = this.parseAIResponse(data, diagramType, prompt);
       
       // Apply enhanced layout to the generated elements
       return this.applyEnhancedLayout(parsedElements, diagramType, layoutStyle);
@@ -478,16 +479,16 @@ export class AIService {
     - Maintain professional appearance with clean lines
     
     SIZING GUIDELINES (Content-Aware):
-    - Small text (< 15 chars): 120x50px rectangles
-    - Medium text (15-30 chars): 160x50px rectangles  
-    - Large text (> 30 chars): 200x60px rectangles
-    - Circles: diameter = text width + 60px (minimum 100px)
-    - Diamonds: width = text width + 80px (minimum 150px)
-    - Adjust height for multi-line text (+20px per line)
+    - Small text (< 15 chars): 60x25px rectangles
+    - Medium text (15-30 chars): 80x25px rectangles  
+    - Large text (> 30 chars): 100x30px rectangles
+    - Circles: diameter = text width + 30px (minimum 50px)
+    - Diamonds: width = text width + 40px (minimum 75px)
+    - Adjust height for multi-line text (+10px per line)
     
     LAYOUT PRINCIPLES:
     - Center important elements on the canvas
-    - Use consistent spacing: 120px vertical, 160px horizontal
+    - Use consistent spacing: 60px vertical, 80px horizontal
     - Align all elements to an invisible grid
     - Create clear visual hierarchy with size and color
     - Balance elements symmetrically for pleasing composition
@@ -621,7 +622,7 @@ export class AIService {
    * @param {string} diagramType - Diagram type for fallback
    * @returns {Array} Validated elements
    */
-  parseAIResponse(response, diagramType) {
+  parseAIResponse(response, diagramType, userPrompt = "User diagram request") { // Added userPrompt as a parameter with a default
     try {
       const content = response?.candidates?.[0]?.content?.parts?.[0]?.text;
       
@@ -655,7 +656,8 @@ export class AIService {
       return validatedElements;
     } catch (error) {
       console.error('Failed to parse AI response:', error);
-      return this.getCompleteMockDiagram(prompt, diagramType);
+      // Use the passed userPrompt or its default for the mock diagram
+      return this.getCompleteMockDiagram(userPrompt, diagramType);
     }
   }
 

@@ -127,21 +127,23 @@ export function createElement(x1, y1, x2, y2, style, tool) {
 
 export function updateElement(
   id,
-  stateOption,
-  setState,
-  state,
-  overwrite = false
+  propsToUpdate,
+  setElementsFunc,
+  isActionOngoing // Corresponds to 'overwrite' for history: true if action is ongoing, false if finalizing
 ) {
-  const index = state.findIndex((ele) => ele.id == id);
-
-  const stateCopy = [...state];
-
-  stateCopy[index] = {
-    ...stateCopy[index],
-    ...stateOption,
-  };
-
-  setState(stateCopy, overwrite);
+  setElementsFunc(prevElements => {
+    const index = prevElements.findIndex(el => el.id === id);
+    if (index === -1) {
+      console.warn(`[updateElement] Element with id ${id} not found for update.`);
+      return prevElements; // Return previous state if element not found
+    }
+    const newElements = [...prevElements];
+    // Ensure we're updating the element with new properties.
+    // propsToUpdate should contain all necessary fields for the update.
+    // If propsToUpdate is a complete element object (like from moveElement), this is fine.
+    newElements[index] = { ...newElements[index], ...propsToUpdate };
+    return newElements;
+  }, isActionOngoing); // Pass the isActionOngoing flag (for history overwrite)
 }
 
 export function deleteElement(s_element, setState, setSelectedElement) {
