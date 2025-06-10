@@ -447,12 +447,25 @@ export function draw(element, context) {
     for (let i = 0; i < element.id.length; i++) {
       seed = (seed * 31 + element.id.charCodeAt(i)) % 1000000;
     }
+  }  // Handle fill patterns for transparent fills
+  let fillColor = fill;
+  let fillStyle = "solid";
+  
+  if (fill === "transparent" && element.fillPattern && element.fillPattern !== "solid") {
+    // For transparent backgrounds with patterns, use a semi-transparent stroke color
+    fillColor = rgba(strokeColor, 0.3);
+    fillStyle = element.fillPattern === "cross-hatch" ? "cross-hatch" : "hachure";
+  } else if (fill !== "transparent") {
+    fillColor = rgba(fill, opacity);
+    fillStyle = element.fillPattern === "hachure" ? "hachure" : 
+               element.fillPattern === "cross-hatch" ? "cross-hatch" : "solid";
   }
+
   const options = {
     stroke: rgba(strokeColor, opacity),
     strokeWidth: strokeWidth,
-    fill: fill === "transparent" ? undefined : rgba(fill, opacity),
-    fillStyle: 'solid',
+    fill: fill === "transparent" && element.fillPattern === "solid" ? undefined : fillColor,
+    fillStyle: fillStyle,
     roughness: roughnessValue,
     strokeLineDash: strokeLineDash,
     seed: seed, // Use consistent numeric seed for stable appearance

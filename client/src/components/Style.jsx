@@ -10,11 +10,10 @@ import {
   updateElement,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
-import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, CORNER_STYLES } from "../global/var";
+import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, EDGE_STYLES, FILL_PATTERNS } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
 
-export default function Style({ selectedElement, selectedElements = [] }) {
-  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle } =
+export default function Style({ selectedElement, selectedElements = [] }) {  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle, selectedTool } =
     useAppContext();  const [elementStyle, setElementStyle] = useState({
     fill: selectedElement?.fill,
     strokeWidth: selectedElement?.strokeWidth,
@@ -23,6 +22,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
     opacity: selectedElement?.opacity,
     sloppiness: selectedElement?.sloppiness ?? 1,
     cornerStyle: selectedElement?.cornerStyle ?? "rounded",
+    fillPattern: selectedElement?.fillPattern ?? "solid",
     // Sticky note specific properties
     title: selectedElement?.title,
     content: selectedElement?.content,
@@ -37,6 +37,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
       opacity: selectedElement?.opacity,
       sloppiness: selectedElement?.sloppiness ?? 1,
       cornerStyle: selectedElement?.cornerStyle ?? "rounded",
+      fillPattern: selectedElement?.fillPattern ?? "solid",
       // Sticky note specific properties
       title: selectedElement?.title,
       content: selectedElement?.content,
@@ -56,23 +57,19 @@ export default function Style({ selectedElement, selectedElements = [] }) {
   if (!hasSelection) return;
 
   return (
-    <section className="styleOptions">
-      {/* Header Section */}
-      <div className="properties-header">
-        <div className="header-content">
-          <h3 className="panel-title">Properties</h3>
-          {isMultiSelection && (
+    <section className="styleOptions">      {/* Header Section */}
+      {isMultiSelection && (
+        <div className="properties-header">
+          <div className="header-content">
             <span className="selection-badge">
               {selectedElements?.length || 0}
             </span>
-          )}
-        </div>
-        {isMultiSelection && (
+          </div>
           <p className="selection-info">
             Bulk editing {selectedElements?.length || 0} elements
           </p>
-        )}
-      </div>      {/* Scrollable Content */}
+        </div>
+      )}{/* Scrollable Content */}
       <div className="properties-content">        {/* Appearance Section - Hidden for sticky notes */}
         {selectedElement?.tool !== "stickyNote" && (
           <div className="properties-section">
@@ -151,7 +148,93 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                     }}
                   />
                 ))}              </div>
-            </div>
+            </div>            {/* Edges - Show for rectangles or when rectangle tool is selected */}
+            {((selectedElement?.tool === "rectangle") || 
+              (isMultiSelection && selectedElements.some(el => el.tool === "rectangle")) ||
+              (selectedTool === "rectangle")) && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Edges</span>
+                </label>
+                <div className="button-group">
+                  {EDGE_STYLES.map((style, index) => (
+                    <button
+                      type="button"
+                      title={style.title}
+                      className={
+                        "style-button" +
+                        (style.slug === elementStyle.cornerStyle ? " selected" : "")
+                      }
+                      key={index}
+                      onClick={() => {
+                        setStylesStates({ cornerStyle: style.slug });
+                        if (isMultiSelection) {
+                          updateMultipleElements(
+                            selectedElements,
+                            { cornerStyle: style.slug },
+                            setElements,
+                            elements
+                          );
+                        } else {
+                          updateElement(
+                            selectedElement.id,
+                            { cornerStyle: style.slug },
+                            setElements,
+                            elements
+                          );
+                        }
+                      }}
+                    >
+                      <style.icon />
+                    </button>
+                  ))}
+                </div>
+              </div>            )}            {/* Fill Pattern - Show only when fill is NOT transparent and for shapes */}
+            {(elementStyle.fill !== "transparent" && 
+              ((selectedElement?.tool === "rectangle") || 
+               (selectedElement?.tool === "diamond") || 
+               (selectedElement?.tool === "circle") ||
+               (isMultiSelection && selectedElements.some(el => ["rectangle", "diamond", "circle"].includes(el.tool))) ||
+               (["rectangle", "diamond", "circle"].includes(selectedTool)))) && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Fill Pattern</span>
+                </label>
+                <div className="button-group">
+                  {FILL_PATTERNS.map((pattern, index) => (
+                    <button
+                      type="button"
+                      title={pattern.title}
+                      className={
+                        "style-button" +
+                        (pattern.slug === elementStyle.fillPattern ? " selected" : "")
+                      }
+                      key={index}
+                      onClick={() => {
+                        setStylesStates({ fillPattern: pattern.slug });
+                        if (isMultiSelection) {
+                          updateMultipleElements(
+                            selectedElements,
+                            { fillPattern: pattern.slug },
+                            setElements,
+                            elements
+                          );
+                        } else {
+                          updateElement(
+                            selectedElement.id,
+                            { fillPattern: pattern.slug },
+                            setElements,
+                            elements
+                          );
+                        }
+                      }}
+                    >
+                      <pattern.icon />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Stroke Style */}
             <div className="property-group">
@@ -231,49 +314,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {
                   }}                />
               </div>            </div>
 
-            {/* Corner Style - Only show for rectangles */}
-            {((selectedElement?.tool === "rectangle") || 
-              (isMultiSelection && selectedElements.some(el => el.tool === "rectangle"))) && (
-              <div className="property-group">
-                <label className="property-label">
-                  <span>Corner Style</span>
-                </label>
-                <div className="button-group">
-                  {CORNER_STYLES.map((style, index) => (
-                    <button
-                      type="button"
-                      title={style.title}
-                      className={
-                        "style-button" +
-                        (style.slug === elementStyle.cornerStyle ? " selected" : "")
-                      }
-                      key={index}
-                      onClick={() => {
-                        setStylesStates({ cornerStyle: style.slug });
-                        if (isMultiSelection) {
-                          updateMultipleElements(
-                            selectedElements,
-                            { cornerStyle: style.slug },
-                            setElements,
-                            elements
-                          );
-                        } else {
-                          updateElement(
-                            selectedElement.id,
-                            { cornerStyle: style.slug },
-                            setElements,
-                            elements
-                          );
-                        }
-                      }}
-                    >
-                      <style.icon />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            
             {/* Opacity */}
             <div className="property-group">
               <label className="property-label">

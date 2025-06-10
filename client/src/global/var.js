@@ -1,4 +1,4 @@
-import { DashedLine, DottedLine, SolidLine, RoundedCorners, SharpCorners } from "../assets/icons";
+import { DashedLine, DottedLine, SolidLine, RoundedEdges, SharpEdges, HachureFill, CrossHatchFill, SolidFill } from "../assets/icons";
 
 export const BACKGROUND_COLORS = [
   "transparent",
@@ -31,16 +31,16 @@ export const STROKE_STYLES = [
   },
 ];
 
-export const CORNER_STYLES = [
+export const EDGE_STYLES = [
   {
     slug: "rounded",
-    icon: RoundedCorners,
-    title: "Rounded Corners",
+    icon: RoundedEdges,
+    title: "Rounded Edges",
   },
   {
     slug: "sharp",
-    icon: SharpCorners,
-    title: "Sharp Corners",
+    icon: SharpEdges,
+    title: "Sharp Edges",
   },
 ];
 
@@ -53,4 +53,22 @@ export const CANVAS_BACKGROUND = [
 
 export const SHORT_CUTS = [
   // Add keyboard shortcuts here if needed for the shortKey function
+];
+
+export const FILL_PATTERNS = [
+  {
+    slug: "solid",
+    icon: SolidFill,
+    title: "Solid Fill",
+  },
+  {
+    slug: "hachure",
+    icon: HachureFill, 
+    title: "Hachure Fill",
+  },
+  {
+    slug: "cross-hatch",
+    icon: CrossHatchFill,
+    title: "Cross Hatch Fill",
+  },
 ];

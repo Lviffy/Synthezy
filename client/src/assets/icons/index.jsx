@@ -107,7 +107,7 @@ export const Hand = () => (
     strokeWidth="5"
     viewBox="-14.55 -14.55 514.1 514.1"
   >
-    <path d="M382.5 69.429c-7.441 0-14.5 1.646-20.852 4.573-4.309-23.218-24.7-40.859-49.148-40.859a49.685 49.685 0 00-21.467 4.852C285.641 16.205 265.932 0 242.5 0c-23.432 0-43.141 16.206-48.533 37.995a49.696 49.696 0 00-21.467-4.852c-27.57 0-50 22.43-50 50v122.222a49.702 49.702 0 00-20-4.187c-27.57 0-50 22.43-50 50V354c0 72.233 58.766 131 131 131h118c72.233 0 131-58.767 131-131V119.429c0-27.571-22.43-50-50-50zM402.5 354c0 55.691-45.309 101-101 101h-118c-55.691 0-101-45.309-101-101V251.178c0-11.028 8.972-20 20-20s20 8.972 20 20v80h30V83.143c0-11.028 8.972-20 20-20s20 8.972 20 20v158.035h30V50c0-11.028 8.972-20 20-20s20 8.972 20 20v191.178h30V83.143c0-11.028 8.972-20 20-20s20 8.972 20 20v158.035h30v-121.75c0-11.028 8.972-20 20-20s20 8.972 20 20V354z"></path>
+    <path d="M382.5 69.429c-7.441 0-14.5 1.646-20.852 4.573-4.309-23.218-24.7-40.859-49.148-40.859a49.685 49.685 0 00-21.467 4.852C285.641 16.205 265.932 0 242.5 0c-23.432 0-43.141 16.206-48.533 37.995a49.696 49.696 0 00-21.467-4.852c-27.57 0-50 22.43-50 50v122.222a49.702 49.702 0 00-20-4.187c-27.57 0-50 22.43-50 50V354c0 72.233 58.766 131 131 131h118c72.233 0 131-58.767 131-131V119.429c0-27.571-22.43-50-50-50zM402.5 354c0 55.691-45.309 101-101 101h-118c-55.691 0-101-45.309-101-101V251.178c0-11.028 8.972-20 20-20s20 8.972 20 20v80h30V83.143c0-11.028 8.972-20 20-20s20 8.972 20 20v158.035h30V50c0-11.028 8.972-20 20-20s20 8.972 20 20v191.178h30v-121.75c0-11.028 8.972-20 20-20s20 8.972 20 20V354z"></path>
   </svg>
 );
 
@@ -740,28 +740,86 @@ export const StickyNote = () => (
   </svg>
 );
 
-export const RoundedCorners = () => (
+export const RoundedEdges = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     height={demention}
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
+    fill="currentColor"
   >
-    <rect x="4" y="4" width="16" height="16" rx="3" ry="3"/>
+    {/* Rectangle with rounded corners */}
+    <path d="M8 4h8a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" stroke="none"/>
+    <path d="M8 6h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="white"/>
   </svg>
 );
 
-export const SharpCorners = () => (
+export const SharpEdges = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    {/* Sharp corner rectangle design based on the provided sharp-corner.svg */}
+    <path d="M4 4h16v16H4V4z" stroke="none"/>
+    <path d="M6 6h12v12H6V6z" fill="white"/>
+  </svg>
+);
+
+export const HachureFill = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     height={demention}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="1.5"
   >
-    <rect x="4" y="4" width="16" height="16" rx="0" ry="0"/>
+    <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="none" stroke="currentColor"/>
+    {/* Simple diagonal lines for hachure pattern - clearer and more visible */}
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="6" y1="9" x2="15" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="6" y1="12" x2="12" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="9" y1="6" x2="18" y2="15" stroke="currentColor" strokeWidth="1"/>
+    <line x1="12" y1="6" x2="18" y2="12" stroke="currentColor" strokeWidth="1"/>
+    <line x1="15" y1="6" x2="18" y2="9" stroke="currentColor" strokeWidth="1"/>
+  </svg>
+);
+
+export const CrossHatchFill = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="none" stroke="currentColor"/>
+    {/* Diagonal lines going one direction */}
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="6" y1="10" x2="14" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="6" y1="14" x2="10" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="10" y1="6" x2="18" y2="14" stroke="currentColor" strokeWidth="1"/>
+    <line x1="14" y1="6" x2="18" y2="10" stroke="currentColor" strokeWidth="1"/>
+    {/* Diagonal lines going opposite direction for cross-hatch */}
+    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="18" y1="10" x2="10" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="18" y1="14" x2="14" y2="18" stroke="currentColor" strokeWidth="1"/>
+    <line x1="14" y1="6" x2="6" y2="14" stroke="currentColor" strokeWidth="1"/>
+    <line x1="10" y1="6" x2="6" y2="10" stroke="currentColor" strokeWidth="1"/>
+  </svg>
+);
+
+export const SolidFill = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor"/>
   </svg>
 );

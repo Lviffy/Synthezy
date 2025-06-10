@@ -988,7 +988,7 @@ section.styleOptions:hover {
 .button-group {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
 }
 
