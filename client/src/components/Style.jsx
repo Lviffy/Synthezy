@@ -13,6 +13,7 @@ import { useAppContext } from "../provider/AppStates";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, EDGE_STYLES, FILL_PATTERNS } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
 
+
 export default function Style({ selectedElement, selectedElements = [] }) {  const { elements, setElements, setSelectedElement, setSelectedElements, setStyle, selectedTool } =
     useAppContext();  const [elementStyle, setElementStyle] = useState({
     fill: selectedElement?.fill,
@@ -28,7 +29,7 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
     content: selectedElement?.content,
     noteColor: selectedElement?.noteColor,
     textColor: selectedElement?.textColor,
-  });  useEffect(() => {
+  });useEffect(() => {
     setElementStyle({
       fill: selectedElement?.fill,
       strokeWidth: selectedElement?.strokeWidth,
@@ -45,10 +46,14 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
       textColor: selectedElement?.textColor,
     });
   }, [selectedElement]);
-
   const setStylesStates = (styleObject) => {
     setElementStyle((prevState) => ({ ...prevState, ...styleObject }));
     setStyle((prevState) => ({ ...prevState, ...styleObject }));
+  };  // Color picker functions
+  const openColorPicker = (colorType) => {
+    if (window.openColorPicker) {
+      window.openColorPicker(colorType);
+    }
   };
 
   const isMultiSelection = selectedElements && Array.isArray(selectedElements) && selectedElements.length > 1;
@@ -72,83 +77,93 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
       )}{/* Scrollable Content */}
       <div className="properties-content">        {/* Appearance Section - Hidden for sticky notes */}
         {selectedElement?.tool !== "stickyNote" && (
-          <div className="properties-section">
-            {/* Stroke Color */}
+          <div className="properties-section">            {/* Stroke Color */}
             <div className="property-group">
               <label className="property-label">
                 <span>Stroke Color</span>
-              </label>
-              <div className="color-palette">
-                {STROKE_COLORS.map((color, index) => (
-                  <button
-                    type="button"
-                    title={color}
-                    style={{ "--color": color }}
-                    key={index}
-                    className={
-                      "color-swatch" +
-                      (color === elementStyle.strokeColor ? " selected" : "")
-                    }
-                    onClick={() => {
-                      setStylesStates({ strokeColor: color });
-                      if (isMultiSelection) {
-                        updateMultipleElements(
-                          selectedElements,
-                          { strokeColor: color },
-                          setElements,
-                          elements
-                        );
-                      } else {
-                        updateElement(
-                          selectedElement.id,
-                          { strokeColor: color },
-                          setElements,
-                          elements
-                        );
+              </label>              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="color-palette" style={{ flex: 1 }}>
+                  {STROKE_COLORS.map((color, index) => (
+                    <button
+                      type="button"
+                      title={color}
+                      style={{ "--color": color }}
+                      key={index}
+                      className={
+                        "color-swatch" +
+                        (color === elementStyle.strokeColor ? " selected" : "")
                       }
-                    }}
-                  />
-                ))}
+                      onClick={() => {
+                        setStylesStates({ strokeColor: color });
+                        if (isMultiSelection) {
+                          updateMultipleElements(
+                            selectedElements,
+                            { strokeColor: color },
+                            setElements,
+                            elements
+                          );
+                        } else {
+                          updateElement(
+                            selectedElement.id,
+                            { strokeColor: color },
+                            setElements,
+                            elements
+                          );
+                        }
+                      }}
+                    />                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="color-picker-button"
+                  onClick={() => openColorPicker('stroke')}
+                  title="Choose custom stroke color"
+                />
               </div>
-            </div>
-
-            {/* Background Color */}
+            </div>{/* Background Color */}
             <div className="property-group">
               <label className="property-label">
                 <span>Fill Color</span>
               </label>
-              <div className="color-palette">
-                {BACKGROUND_COLORS.map((fill, index) => (
-                  <button
-                    type="button"
-                    title={fill}
-                    className={
-                      "color-swatch" +
-                      (fill === elementStyle.fill ? " selected" : "")
-                    }
-                    style={{ "--color": fill }}
-                    key={index}
-                    onClick={() => {
-                      setStylesStates({ fill });
-                      if (isMultiSelection) {
-                        updateMultipleElements(
-                          selectedElements,
-                          { fill },
-                          setElements,
-                          elements
-                        );
-                      } else {
-                        updateElement(
-                          selectedElement.id,
-                          { fill },
-                          setElements,
-                          elements
-                        );
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="color-palette" style={{ flex: 1 }}>
+                  {BACKGROUND_COLORS.map((fill, index) => (
+                    <button
+                      type="button"
+                      title={fill}
+                      className={
+                        "color-swatch" +
+                        (fill === elementStyle.fill ? " selected" : "")
                       }
-                    }}
-                  />
-                ))}              </div>
-            </div>            {/* Edges - Show for rectangles or when rectangle tool is selected */}
+                      style={{ "--color": fill }}
+                      key={index}
+                      onClick={() => {
+                        setStylesStates({ fill });
+                        if (isMultiSelection) {
+                          updateMultipleElements(
+                            selectedElements,
+                            { fill },
+                            setElements,
+                            elements
+                          );
+                        } else {
+                          updateElement(
+                            selectedElement.id,
+                            { fill },
+                            setElements,
+                            elements
+                          );
+                        }
+                      }}
+                    />                  ))}                </div>
+                <button
+                  type="button"
+                  className="color-picker-button"
+                  onClick={() => openColorPicker('fill')}
+                  title="Choose custom fill color"
+                />
+              </div>
+            </div>{/* Edges - Show for rectangles or when rectangle tool is selected */}
             {((selectedElement?.tool === "rectangle") || 
               (isMultiSelection && selectedElements.some(el => el.tool === "rectangle")) ||
               (selectedTool === "rectangle")) && (
@@ -684,11 +699,13 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
                   <Duplicate />
                   <span>Duplicate All</span>
                 </button>
-              </div>
-            )}
+              </div>        )}
           </div>
         </div>
       </div>
     </section>
   );
 }
+
+// Separate Color Picker Component that renders outside the property box
+

@@ -1052,8 +1052,13 @@ export default function useCanvas() {  const {
     } else {
       document.documentElement.style.setProperty("--canvas-cursor", "default");
     }
-  }, [keys, selectedTool, action, isInElement, inCorner]);
-  useEffect(() => {
+  }, [keys, selectedTool, action, isInElement, inCorner]);  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Add wheel event listener with passive: false to allow preventDefault
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+
     const preventBrowserZoom = (event) => {
       if (event.ctrlKey) {
         event.preventDefault();
@@ -1064,9 +1069,10 @@ export default function useCanvas() {  const {
     });
 
     return () => {
+      canvas.removeEventListener("wheel", handleWheel);
       window.removeEventListener("wheel", preventBrowserZoom);
     };
-  }, []);  return {
+  }, [handleWheel]);return {
     canvasRef,
     handleMouseDown,
     handleMouseMove,

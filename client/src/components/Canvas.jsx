@@ -25,13 +25,12 @@ export default function Canvas() {  const {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: 'none' }} // Prevent default touch behaviors
-      />      {textInputMode && createPortal(
+      />{textInputMode && createPortal(
         <TextInput
           position={{ x: textInputMode.x, y: textInputMode.y }}
           onComplete={() => setTextInputMode(null)}
