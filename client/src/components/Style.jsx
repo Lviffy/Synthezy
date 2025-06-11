@@ -116,112 +116,116 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
                 </select>
                 <span className="select-arrow" aria-hidden="true"></span> {/* Custom arrow */}
               </div>
-            </div>
-
-            {/* Stroke Color for Pen */}
-            <div className="property-group">
-              <label className="property-label">Stroke Color</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div className="color-palette" style={{ flex: 1 }}>
-                  {STROKE_COLORS.map((color, index) => (
-                    <button
-                      type="button"
-                      title={color}
-                      style={{ "--color": color }}
-                      key={index}
-                      className={
-                        "color-swatch" +
-                        (color === penProperties.strokeColor ? " selected" : "")
-                      }
-                      onClick={() => {
-                        setPenProperties(prev => ({ ...prev, strokeColor: color }));
-                      }}
-                    />                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="color-picker-button"
-                  onClick={() => openColorPicker('stroke')} // Assuming this works for pen stroke too
-                  title="Choose custom stroke color"
-                />
-              </div>
-            </div>
-
-            {/* Stroke Width for Pen */}
-            <div className="property-group">
-              <label className="property-label">
-                <span>Stroke Width</span>
-                <span className="property-value">{penProperties.strokeWidth}px</span>
-              </label>
-              <div className="slider-container">
-                <input
-                  type="range"
-                  className="property-slider"
-                  min={STROKE_WIDTH_RANGE.min}
-                  max={STROKE_WIDTH_RANGE.max}
-                  value={penProperties.strokeWidth}
-                  step={STROKE_WIDTH_RANGE.step}
-                  style={{
-                    '--slider-progress': `${((penProperties.strokeWidth - STROKE_WIDTH_RANGE.min) / (STROKE_WIDTH_RANGE.max - STROKE_WIDTH_RANGE.min)) * 100}%`
-                  }}
-                  onChange={({ target }) => {
-                    const strokeWidth = minmax(+target.value, [STROKE_WIDTH_RANGE.min, STROKE_WIDTH_RANGE.max]);
-                    setPenProperties(prev => ({ ...prev, strokeWidth }));
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Opacity for Pen */}
-            <div className="property-group">
-              <label className="property-label">
-                <span>Opacity</span>
-                <span className="property-value">{Math.round(penProperties.opacity * 100)}%</span>
-              </label>
-              <div className="slider-container">
-                <input
-                  type="range"
-                  min={OPACITY_RANGE.min * 100} // Scale to 0-100 for slider
-                  max={OPACITY_RANGE.max * 100}
-                  className="property-slider"
-                  value={penProperties.opacity * 100}
-                  step={OPACITY_RANGE.step * 100}
-                  style={{
-                    '--slider-progress': `${penProperties.opacity * 100}%`
-                  }}
-                  onChange={({ target }) => {
-                    const opacity = minmax(+target.value / 100, [OPACITY_RANGE.min, OPACITY_RANGE.max]);
-                    setPenProperties(prev => ({ ...prev, opacity }));
-                  }}
-                />
-              </div>
-            </div>
-            
-            {/* Line Cap for Pen */}
-            <div className="property-group">
-              <label className="property-label">Line Cap</label>
-              <div className="button-group line-cap-group"> {/* Added specific class */}
-                {LINE_CAP_OPTIONS.map(option => (
+            </div>            {/* Stroke Color for Pen - Hidden for laser pointer */}
+            {selectedPen !== PEN_TYPES.LASER && (
+              <div className="property-group">
+                <label className="property-label">Stroke Color</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="color-palette" style={{ flex: 1 }}>
+                    {STROKE_COLORS.map((color, index) => (
+                      <button
+                        type="button"
+                        title={color}
+                        style={{ "--color": color }}
+                        key={index}
+                        className={
+                          "color-swatch" +
+                          (color === penProperties.strokeColor ? " selected" : "")
+                        }
+                        onClick={() => {
+                          setPenProperties(prev => ({ ...prev, strokeColor: color }));
+                        }}
+                      />                    ))}
+                  </div>
                   <button
-                    key={option.slug}
                     type="button"
-                    title={option.title}
-                    className={
-                      "style-button line-cap-button" + // Added specific class
-                      (option.slug === penProperties.lineCap ? " selected" : "")
-                    }
-                    onClick={() => setPenProperties(prev => ({ ...prev, lineCap: option.slug }))
-                    }
-                  >
-                    {/* Consider adding icons here if available */}
-                    {option.title}
-                  </button>
-                ))}
+                    className="color-picker-button"
+                    onClick={() => openColorPicker('stroke')} // Assuming this works for pen stroke too
+                    title="Choose custom stroke color"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Laser Pen Specific: Duration */}
-            { selectedPen === PEN_TYPES.LASER && 
+            {/* Stroke Width for Pen - Hidden for laser pointer */}
+            {selectedPen !== PEN_TYPES.LASER && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Stroke Width</span>
+                  <span className="property-value">{penProperties.strokeWidth}px</span>
+                </label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    className="property-slider"
+                    min={STROKE_WIDTH_RANGE.min}
+                    max={STROKE_WIDTH_RANGE.max}
+                    value={penProperties.strokeWidth}
+                    step={STROKE_WIDTH_RANGE.step}
+                    style={{
+                      '--slider-progress': `${((penProperties.strokeWidth - STROKE_WIDTH_RANGE.min) / (STROKE_WIDTH_RANGE.max - STROKE_WIDTH_RANGE.min)) * 100}%`
+                    }}
+                    onChange={({ target }) => {
+                      const strokeWidth = minmax(+target.value, [STROKE_WIDTH_RANGE.min, STROKE_WIDTH_RANGE.max]);
+                      setPenProperties(prev => ({ ...prev, strokeWidth }));
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Opacity for Pen - Hidden for laser pointer */}
+            {selectedPen !== PEN_TYPES.LASER && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Opacity</span>
+                  <span className="property-value">{Math.round(penProperties.opacity * 100)}%</span>
+                </label>
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min={OPACITY_RANGE.min * 100} // Scale to 0-100 for slider
+                    max={OPACITY_RANGE.max * 100}
+                    className="property-slider"
+                    value={penProperties.opacity * 100}
+                    step={OPACITY_RANGE.step * 100}
+                    style={{
+                      '--slider-progress': `${penProperties.opacity * 100}%`
+                    }}
+                    onChange={({ target }) => {
+                      const opacity = minmax(+target.value / 100, [OPACITY_RANGE.min, OPACITY_RANGE.max]);
+                      setPenProperties(prev => ({ ...prev, opacity }));
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Line Cap for Pen - Hidden for laser pointer */}
+            {selectedPen !== PEN_TYPES.LASER && (
+              <div className="property-group">
+                <label className="property-label">Line Cap</label>
+                <div className="button-group line-cap-group"> {/* Added specific class */}
+                  {LINE_CAP_OPTIONS.map(option => (
+                    <button
+                      key={option.slug}
+                      type="button"
+                      title={option.title}
+                      className={
+                        "style-button line-cap-button" + // Added specific class
+                        (option.slug === penProperties.lineCap ? " selected" : "")
+                      }
+                      onClick={() => setPenProperties(prev => ({ ...prev, lineCap: option.slug }))
+                      }
+                    >
+                      {/* Consider adding icons here if available */}
+                      {option.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}            {/* Laser Pen Specific: Duration - Hidden for laser pointer */}
+            {selectedPen === PEN_TYPES.LASER && false && (
               <div className="property-group">
                 <label className="property-label">
                   <span>Laser Duration (ms)</span>
@@ -244,7 +248,40 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
                   />
                 </div>
               </div>
-            }
+            )}
+
+            {/* Laser Pointer Info Message */}
+            {selectedPen === PEN_TYPES.LASER && (
+              <div className="property-group">
+                <div style={{
+                  padding: '16px',
+                  background: 'rgba(255, 0, 0, 0.05)',
+                  border: '1px solid rgba(255, 0, 0, 0.15)',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    fontSize: '24px',
+                    marginBottom: '8px'
+                  }}>🔴</div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#dc2626',
+                    marginBottom: '4px'
+                  }}>
+                    Laser Pointer Active
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    lineHeight: '1.4'
+                  }}>
+                    Draw to create temporary laser trails that automatically fade away. Perfect for presentations and highlighting content.
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>

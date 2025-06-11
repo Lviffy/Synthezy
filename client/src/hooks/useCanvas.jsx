@@ -11,6 +11,7 @@ import {
   cornerCursor,
   inSelectedCorner,
   drawEraser, // Import drawEraser
+  drawLaserTrail, // Import drawLaserTrail
 } from "../helper/canvas";
 import {
   adjustCoordinates,
@@ -89,6 +90,12 @@ export default function useCanvas() {  const {
   // Eraser trail state
   const [eraserTrail, setEraserTrail] = useState([]);
   const eraserTrailRef = useRef([]); // Ref to keep track of trail points for animation
+  // Laser pointer trail state for continuous fading animation
+  const [laserTrail, setLaserTrail] = useState([]);
+  const laserTrailRef = useRef([]);
+  const laserAnimationRef = useRef(null);
+  const currentStrokeIdRef = useRef(null);
+  const LASER_FADE_DURATION = 2000; // 2 seconds in milliseconds
 
   // Smooth translation state for hand tool
   const [smoothTranslate, setSmoothTranslate] = useState({ x: 0, y: 0 });
@@ -383,11 +390,18 @@ export default function useCanvas() {  const {
     }
 
     setAction("draw");
-    
-    // Handle draw tool for freehand drawing
+      // Handle draw tool for freehand drawing
     if (selectedTool === "draw") {
-      setIsDrawing(true);
-      
+      setIsDrawing(true);      // Special handling for laser pointer - use trail instead of elements
+      if (selectedPen === PEN_TYPES.LASER) {
+        // Start a new stroke (generate a new stroke ID)
+        const newStrokeId = Date.now() + Math.random();
+        currentStrokeIdRef.current = newStrokeId;
+        // Add the first point of the new stroke
+        addLaserPoint(clientX, clientY);
+        return; // Don't create an element for laser pointer
+      }
+
       const elementProperties = {
         ...penProperties, // All properties like strokeColor, width, opacity, lineCap, smoothing etc.
         penType: selectedPen, // Explicitly store the type of pen used for this element
@@ -504,15 +518,25 @@ export default function useCanvas() {  const {
     } else {
       setIsInElement(false);
     }    if (action == "draw") {
+      // Special handling for laser pointer - add to trail instead of element
+      if (selectedTool === "draw" && selectedPen === PEN_TYPES.LASER) {
+        addLaserPoint(clientX, clientY);
+        return; // Don't update elements for laser pointer
+      }
+
       const element = elements.at(-1); // Get the current element being drawn
       if (!element) return; // Should not happen if isDrawing is true
       const { id } = element;
       
       if (selectedTool === "draw" && isDrawing) {
-        // Add point to freehand path
+        // Add point to freehand path for regular pens
         // Ensure element.points exists and is an array
         const currentPoints = element.points || [];
-        const newPoints = [...currentPoints, { x: clientX, y: clientY }];
+        
+        // Create new point
+        const newPoint = { x: clientX, y: clientY };
+        
+        const newPoints = [...currentPoints, newPoint];
         
         // Update element with new points and adjust bounding box (x2, y2)
         // The bounding box for 'draw' elements is derived from points in canvas.js,
@@ -701,32 +725,25 @@ export default function useCanvas() {  const {
       }
       setAction("none");
       return;
-    }
-
-    if (currentAction === "draw") {
-      const drawnElement = elements.at(-1);
-
+    }    if (currentAction === "draw") {      // Special handling for laser pointer
       if (currentSelectedTool === "draw" && currentSelectedPen === PEN_TYPES.LASER) {
-        if (drawnElement && drawnElement.id && drawnElement.tool === "draw" && drawnElement.penType === PEN_TYPES.LASER) {
-          const duration = drawnElement.laserDuration || 
-                           (penProperties && penProperties[PEN_PROPERTIES.LASER_DURATION]) || 
-                           2000; // Fallback duration
-          
-          setTimeout(() => {
-            setElements((prevElements) =>
-              prevElements.filter((el) => el.id !== drawnElement.id)
-            );
-          }, duration);
+        setIsDrawing(false);
+        // Don't clear the trail - let it fade out naturally
+        // The animation loop will continue and clean up expired points
+        if (!lockTool) {
+          setSelectedTool("selection");
+          setSelectedElement(null);
         }
+        setAction("none");
+        return;
       }
+
+      const drawnElement = elements.at(-1);
       
       // If not locked, switch back to selection tool
       if (!lockTool) {
         setSelectedTool("selection");
-        // Don't select the element if it's a laser pen stroke that will vanish
-        if (currentSelectedTool === "draw" && currentSelectedPen === PEN_TYPES.LASER) {
-          setSelectedElement(null);
-        } else if (drawnElement) {
+        if (drawnElement) {
           setSelectedElement(drawnElement);
         }
       }
@@ -913,12 +930,15 @@ export default function useCanvas() {  const {
           draw(element, context, rough.canvas(canvas), style, scale, element.tool === "text");
         }
       });
-    }
-
-    // Draw eraser trail and indicator if eraser tool is active
+    }    // Draw eraser trail and indicator if eraser tool is active
     if (selectedTool === "eraser") {
       // Pass currentMousePosition for the indicator, and eraserTrail for the trail
       drawEraser(context, eraserTrail, currentMousePosition, scale);
+    }
+
+    // Draw laser pointer trail if active
+    if (laserTrail && laserTrail.length > 0) {
+      drawLaserTrail(context, laserTrail, scale, LASER_FADE_DURATION);
     }
 
     // Draw selection focus
@@ -961,8 +981,7 @@ export default function useCanvas() {  const {
       canvas.style.cursor = "text";
     } else {
       canvas.style.cursor = "default";
-    }
-  }, [
+    }  }, [
     elements,
     selectedElement,
     selectedElements,
@@ -979,9 +998,12 @@ export default function useCanvas() {  const {
     selectedTool,
     dimension,
     eraserTrail, // Add eraserTrail as a dependency
-    currentMousePosition // Add currentMousePosition as a dependency
+    currentMousePosition, // Add currentMousePosition as a dependency
+    laserTrail // Add laserTrail as a dependency
   ]);
-  useEffect(() => {    const keyDownFunction = (event) => {
+
+  useEffect(() => {
+    const keyDownFunction = (event) => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const prevent = () => event.preventDefault();
       
@@ -1246,8 +1268,78 @@ export default function useCanvas() {  const {
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
       window.removeEventListener("wheel", preventBrowserZoom);
+    };  }, [handleWheel]);
+  // Helper function to start laser pointer animation
+  const startLaserAnimation = useCallback(() => {
+    if (laserAnimationRef.current) return; // Already running
+      const animate = () => {
+      const now = Date.now();
+      // Only remove points that are well beyond the fade duration to prevent memory leaks
+      const keepPoints = laserTrailRef.current.filter(
+        point => now - point.timestamp < LASER_FADE_DURATION + 1500 // Keep for 1.5 extra seconds
+      );
+      
+      // Force re-render for smooth fading even if no points were removed
+      // This ensures the canvas updates continuously for smooth opacity transitions
+      laserTrailRef.current = keepPoints;
+      setLaserTrail([...keepPoints]); // Create new array reference to trigger re-render
+      
+      // Continue animation if there are any points (even fading ones)
+      if (keepPoints.length > 0) {
+        laserAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        laserAnimationRef.current = null; // Stop animation when no points left
+      }
     };
-  }, [handleWheel]);return {
+    
+    laserAnimationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Helper function to stop laser pointer animation
+  const stopLaserAnimation = useCallback(() => {
+    if (laserAnimationRef.current) {
+      cancelAnimationFrame(laserAnimationRef.current);
+      laserAnimationRef.current = null;
+    }
+    laserTrailRef.current = [];
+    setLaserTrail([]);
+  }, []);  // Helper function to add point to laser trail
+  const addLaserPoint = useCallback((x, y) => {
+    const currentStrokeId = currentStrokeIdRef.current || Date.now();
+    const newPoint = { 
+      x, 
+      y, 
+      timestamp: Date.now(),
+      strokeId: currentStrokeId 
+    };
+    
+    // Ensure laserTrailRef.current is an array
+    if (!Array.isArray(laserTrailRef.current)) {
+      laserTrailRef.current = [];
+    }
+    
+    laserTrailRef.current = [...laserTrailRef.current, newPoint];
+    setLaserTrail(laserTrailRef.current);
+    
+    // Start animation if not already running
+    startLaserAnimation();
+  }, [startLaserAnimation]);
+
+  // Cleanup laser animation when component unmounts or tool changes
+  useEffect(() => {
+    if (selectedTool !== "draw" || selectedPen !== PEN_TYPES.LASER) {
+      stopLaserAnimation();
+    }
+  }, [selectedTool, selectedPen, stopLaserAnimation]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopLaserAnimation();
+    };
+  }, [stopLaserAnimation]);
+
+  return {
     canvasRef,
     handleMouseDown,
     handleMouseMove,

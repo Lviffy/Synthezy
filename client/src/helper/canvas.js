@@ -187,20 +187,76 @@ export const shapes = {
     const centerY = y1 + (y2 - y1) / 2;
     
     roughCanvas.ellipse(centerX, centerY, width, height, options);
-  },
-  draw: (x1, y1, x2, y2, roughCanvas, options, element) => {
+  },  draw: (x1, y1, x2, y2, roughCanvas, options, element) => {
     // For freehand drawing, we need to draw the path from points
     if (element && element.points && element.points.length > 1) {
       const points = element.points;
       // Destructure pen properties. Opacity is 0-1. Smoothing is now always true.
-      const { penType, strokeColor, strokeWidth, opacity, lineCap } = element; 
+      const { penType, strokeColor, strokeWidth, opacity, lineCap, laserDuration } = element; 
 
       const context = roughCanvas.canvas.getContext('2d');
       context.save();
       context.lineCap = lineCap || 'round'; 
-      context.strokeStyle = rgba(strokeColor, opacity); 
       context.lineWidth = strokeWidth;
 
+      // Special handling for laser pen with fade-out effect
+      if (penType === "laser") {
+        const now = Date.now();
+        const fadeDuration = laserDuration || 2000; // Default 2 seconds
+        
+        // Filter and draw points based on their age with fade effect
+        let validPoints = [];
+        for (let point of points) {
+          const pointTime = point.timestamp || point.time || now; // Support different timestamp properties
+          const age = now - pointTime;
+          
+          if (age < fadeDuration) {
+            // Calculate fade-out opacity
+            const lifeRatio = Math.max(0, (fadeDuration - age) / fadeDuration);
+            const fadeOpacity = opacity * lifeRatio;
+            
+            if (fadeOpacity > 0.01) { // Only include points with visible opacity
+              validPoints.push({
+                ...point,
+                opacity: fadeOpacity
+              });
+            }
+          }
+        }
+        
+        if (validPoints.length > 1) {
+          // Draw laser path with varying opacity
+          context.beginPath();
+          context.moveTo(validPoints[0].x, validPoints[0].y);
+          
+          // For laser pen, draw segments with individual opacity
+          for (let i = 1; i < validPoints.length; i++) {
+            const point = validPoints[i];
+            const prevPoint = validPoints[i - 1];
+            
+            // Use the point's calculated fade opacity
+            context.strokeStyle = rgba(strokeColor, point.opacity);
+            
+            context.beginPath();
+            context.moveTo(prevPoint.x, prevPoint.y);
+            context.lineTo(point.x, point.y);
+            context.stroke();
+          }
+        } else if (validPoints.length === 1) {
+          // Draw single dot for laser
+          const point = validPoints[0];
+          context.fillStyle = rgba(strokeColor, point.opacity);
+          context.beginPath();
+          context.arc(point.x, point.y, strokeWidth / 2, 0, Math.PI * 2);
+          context.fill();
+        }
+        
+        context.restore();
+        return;
+      }
+
+      // Regular pen drawing (non-laser)
+      context.strokeStyle = rgba(strokeColor, opacity); 
       context.beginPath();
       context.moveTo(points[0].x, points[0].y);
 
@@ -1076,4 +1132,123 @@ export function drawEraser(context, eraserTrail, currentMousePos, scale) {
     }
     context.restore();
   }
+}
+
+// Function to draw laser pointer trail with fading effect
+export function drawLaserTrail(context, laserTrail, scale, fadeDuration = 2000) {
+  if (!context || !laserTrail || laserTrail.length === 0) return;
+
+  const now = Date.now();
+
+  // Group points by age for different opacity levels
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = 3 / scale; // Adjust for scale  // Draw trail with enhanced fading effect
+  for (let i = 1; i < laserTrail.length; i++) {
+    const point = laserTrail[i];
+    const prevPoint = laserTrail[i - 1];
+      // Don't connect points from different strokes
+    if (point.strokeId !== prevPoint.strokeId) continue;
+    
+    // Skip points that are too close together to reduce visual clutter
+    const distance = Math.sqrt(
+      Math.pow(point.x - prevPoint.x, 2) + Math.pow(point.y - prevPoint.y, 2)
+    );
+    if (distance < 0.8 / scale) continue; // Skip very close points
+    
+    // Calculate age and fade for both points
+    const pointAge = now - point.timestamp;
+    const prevPointAge = now - prevPoint.timestamp;
+    
+    // Skip if both points are well beyond fade duration
+    if (pointAge >= fadeDuration * 1.1 && prevPointAge >= fadeDuration * 1.1) continue;
+    
+    // Calculate position in the trail (newer points are at the "head")
+    const segmentAge = Math.min(pointAge, prevPointAge);
+    const maxAge = Math.max(pointAge, prevPointAge);
+    const avgAge = (pointAge + prevPointAge) / 2;
+    
+    // Create multiple fade factors for smoother effect
+    const timeFade = Math.max(0, (fadeDuration - avgAge) / fadeDuration);
+    
+    // Use exponential decay for more natural fade
+    const exponentialFade = Math.exp(-avgAge / (fadeDuration * 0.4));
+    
+    // Combine linear and exponential fades
+    const combinedFade = timeFade * 0.6 + exponentialFade * 0.4;
+    
+    // Add position-based fade (trail gets dimmer toward the tail)
+    const trailPosition = i / laserTrail.length;
+    const positionFade = 0.7 + (trailPosition * 0.3); // Trail head is brighter
+    
+    // Final opacity calculation
+    let opacity = 0.95 * combinedFade * positionFade;
+    
+    // Apply smoothstep function for even smoother transitions
+    if (combinedFade > 0) {
+      const smoothstep = combinedFade * combinedFade * (3 - 2 * combinedFade);
+      opacity = 0.95 * smoothstep * positionFade;
+    }
+    
+    // Clamp opacity
+    opacity = Math.max(0, Math.min(1, opacity));
+    
+    if (opacity < 0.005) continue; // Skip nearly invisible segments
+    
+    // Dynamic line width based on age (newer = thicker)
+    const widthFactor = 0.5 + (combinedFade * 0.5);
+    context.lineWidth = (2.5 + widthFactor) / scale;
+    
+    // Draw line segment with fading opacity
+    context.strokeStyle = `rgba(255, 0, 0, ${opacity})`;
+    context.beginPath();
+    context.moveTo(prevPoint.x, prevPoint.y);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  }  // Draw enhanced tip points for very recent additions (only the most recent points)
+  laserTrail.forEach((point, index) => {
+    const age = now - point.timestamp;
+    
+    // Only draw tip points for the most recent points, and not too densely
+    if (age < 80 && index >= laserTrail.length - 15) { // Only last 15 points and very recent
+      const lifeRatio = Math.max(0, (80 - age) / 80);
+      
+      // Only show the very tip of the trail
+      let tipOpacity;
+      if (age < 20) {
+        // Very recent - bright tip
+        tipOpacity = 0.95;
+      } else {
+        // Quick fade for tip points
+        const fadeRatio = (age - 20) / 60;
+        tipOpacity = 0.95 * (1 - fadeRatio);
+      }
+      
+      if (tipOpacity > 0.1) {
+        // Smaller, more subtle tip points
+        const radius = (1.5 + (lifeRatio * 0.8)) / scale;
+        
+        // Only add glow for the very newest points
+        if (age < 30) {
+          context.shadowColor = 'rgba(255, 0, 0, 0.2)';
+          context.shadowBlur = 2 / scale;
+        } else {
+          context.shadowColor = 'transparent';
+          context.shadowBlur = 0;
+        }
+        
+        context.fillStyle = `rgba(255, 0, 0, ${tipOpacity})`;
+        context.beginPath();
+        context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        context.fill();
+        
+        // Reset shadow
+        context.shadowColor = 'transparent';
+        context.shadowBlur = 0;
+      }
+    }
+  });
+
+  context.restore();
 }
