@@ -347,51 +347,58 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
                   onClick={() => openColorPicker('stroke')}
                   title="Choose custom stroke color"
                 />
-              </div>
-            </div>{/* Background Color */}
-            <div className="property-group">
-              <label className="property-label">
-                <span>Fill Color</span>
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div className="color-palette" style={{ flex: 1 }}>
-                  {BACKGROUND_COLORS.map((fill, index) => (
-                    <button
-                      type="button"
-                      title={fill}
-                      className={
-                        "color-swatch" +
-                        (fill === elementStyle.fill ? " selected" : "")
-                      }
-                      style={{ "--color": fill }}
-                      key={index}
-                      onClick={() => {
-                        setStylesStates({ fill });
-                        if (isMultiSelection) {
-                          updateMultipleElements(
-                            selectedElements,
-                            { fill },
-                            setElements,
-                            elements
-                          );
-                        } else {
-                          updateElement(
-                            selectedElement.id,
-                            { fill },
-                            setElements,
-                            elements
-                          );
+              </div>            </div>
+
+            {/* Fill Color - Hide for arrow and line tools/elements */}
+            {!((selectedElement?.tool === "arrow") || 
+               (selectedElement?.tool === "line") ||
+               (isMultiSelection && selectedElements.some(el => el.tool === "arrow" || el.tool === "line")) ||
+               (selectedTool === "arrow") || 
+               (selectedTool === "line")) && (
+              <div className="property-group">
+                <label className="property-label">
+                  <span>Fill Color</span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="color-palette" style={{ flex: 1 }}>
+                    {BACKGROUND_COLORS.map((fill, index) => (
+                      <button
+                        type="button"
+                        title={fill}
+                        className={
+                          "color-swatch" +
+                          (fill === elementStyle.fill ? " selected" : "")
                         }
-                      }}
-                    />                  ))}                </div>
-                <button
-                  type="button"
-                  className="color-picker-button"
-                  onClick={() => openColorPicker('fill')}
-                  title="Choose custom fill color"
-                />
+                        style={{ "--color": fill }}
+                        key={index}
+                        onClick={() => {
+                          setStylesStates({ fill });
+                          if (isMultiSelection) {
+                            updateMultipleElements(
+                              selectedElements,
+                              { fill },
+                              setElements,
+                              elements
+                            );
+                          } else {
+                            updateElement(
+                              selectedElement.id,
+                              { fill },
+                              setElements,
+                              elements
+                            );
+                          }
+                        }}
+                      />                    ))}                  </div>
+                  <button
+                    type="button"
+                    className="color-picker-button"
+                    onClick={() => openColorPicker('fill')}
+                    title="Choose custom fill color"
+                  />
+                </div>
               </div>
-            </div>{/* Edges - Show for rectangles or when rectangle tool is selected */}
+            )}{/* Edges - Show for rectangles or when rectangle tool is selected */}
             {((selectedElement?.tool === "rectangle") || 
               (isMultiSelection && selectedElements.some(el => el.tool === "rectangle")) ||
               (selectedTool === "rectangle")) && (
@@ -856,80 +863,82 @@ export default function Style({ selectedElement, selectedElements = [] }) {  con
               </div>
             </div>
           </div>
-        )}        {/* Actions Section */}
-        <div className="properties-section">
-          <div className="property-group">
-            {!isMultiSelection ? (
-              <div className="action-buttons">
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteElement(
-                      selectedElement,
-                      setElements,
-                      setSelectedElement
-                    );
-                  }}
-                  title="Delete element"
-                  className="action-button delete"
-                >
-                  <Delete />
-                  <span>Delete</span>
-                </button>
-                <button
-                  type="button"
-                  className="action-button duplicate"
-                  title="Duplicate element (Ctrl + D)"
-                  onClick={() => {
-                    duplicateElement(
-                      selectedElement,
-                      setElements,
-                      setSelectedElement,
-                      10
-                    );
-                  }}
-                >
-                  <Duplicate />
-                  <span>Duplicate</span>
-                </button>
-              </div>
-            ) : (
-              <div className="action-buttons">
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteMultipleElements(
-                      selectedElements,
-                      setElements,
-                      setSelectedElement,
-                      setSelectedElements
-                    );
-                  }}
-                  title={`Delete ${selectedElements?.length || 0} elements`}
-                  className="action-button delete"
-                >
-                  <Delete />
-                  <span>Delete All</span>
-                </button>
-                <button
-                  type="button"
-                  className="action-button duplicate"
-                  title={`Duplicate ${selectedElements?.length || 0} elements (Ctrl + D)`}
-                  onClick={() => {
-                    duplicateMultipleElements(
-                      selectedElements,
-                      setElements,
-                      setSelectedElements,
-                      10
-                    );
-                  }}
-                >
-                  <Duplicate />
-                  <span>Duplicate All</span>
-                </button>
-              </div>        )}
+        )}        {/* Actions Section - Only show when elements are actually selected */}
+        {(selectedElement?.id || (selectedElements && Array.isArray(selectedElements) && selectedElements.length > 0)) && (
+          <div className="properties-section">
+            <div className="property-group">
+              {!isMultiSelection ? (
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteElement(
+                        selectedElement,
+                        setElements,
+                        setSelectedElement
+                      );
+                    }}
+                    title="Delete element"
+                    className="action-button delete"
+                  >
+                    <Delete />
+                    <span>Delete</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="action-button duplicate"
+                    title="Duplicate element (Ctrl + D)"
+                    onClick={() => {
+                      duplicateElement(
+                        selectedElement,
+                        setElements,
+                        setSelectedElement,
+                        10
+                      );
+                    }}
+                  >
+                    <Duplicate />
+                    <span>Duplicate</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteMultipleElements(
+                        selectedElements,
+                        setElements,
+                        setSelectedElement,
+                        setSelectedElements
+                      );
+                    }}
+                    title={`Delete ${selectedElements?.length || 0} elements`}
+                    className="action-button delete"
+                  >
+                    <Delete />
+                    <span>Delete All</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="action-button duplicate"
+                    title={`Duplicate ${selectedElements?.length || 0} elements (Ctrl + D)`}
+                    onClick={() => {
+                      duplicateMultipleElements(
+                        selectedElements,
+                        setElements,
+                        setSelectedElements,
+                        10
+                      );
+                    }}
+                  >
+                    <Duplicate />
+                    <span>Duplicate All</span>
+                  </button>
+                </div>              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
