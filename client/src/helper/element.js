@@ -13,17 +13,19 @@ export function isWithinElement(x, y, element) {
 
       const offset = distance(a, b) - (distance(a, c) + distance(b, c));
       return Math.abs(offset) < (0.05 * strokeWidth || 1);
-      
+
     case "draw":
       // For freehand drawing, check if point is near any segment of the path
       if (element.points && element.points.length > 1) {
         const threshold = strokeWidth + 5; // Add some tolerance
-        
+
         for (let i = 0; i < element.points.length - 1; i++) {
           const p1 = element.points[i];
           const p2 = element.points[i + 1];
-          const lineDistance = distance(p1, p2) - (distance(p1, { x, y }) + distance(p2, { x, y }));
-          
+          const lineDistance =
+            distance(p1, p2) -
+            (distance(p1, { x, y }) + distance(p2, { x, y }));
+
           if (Math.abs(lineDistance) < threshold * 0.1) {
             return true;
           }
@@ -31,11 +33,13 @@ export function isWithinElement(x, y, element) {
         return false;
       }
       // Fallback to bounding box
-      return x >= Math.min(x1, x2) - strokeWidth && 
-             x <= Math.max(x1, x2) + strokeWidth &&
-             y >= Math.min(y1, y2) - strokeWidth && 
-             y <= Math.max(y1, y2) + strokeWidth;
-             
+      return (
+        x >= Math.min(x1, x2) - strokeWidth &&
+        x <= Math.max(x1, x2) + strokeWidth &&
+        y >= Math.min(y1, y2) - strokeWidth &&
+        y <= Math.max(y1, y2) + strokeWidth
+      );
+
     case "text":
       // Text elements use bounding box detection
       const minX = Math.min(x1, x2) - strokeWidth / 2;
@@ -43,14 +47,14 @@ export function isWithinElement(x, y, element) {
       const minY = Math.min(y1, y2) - strokeWidth / 2;
       const maxY = Math.max(y1, y2) + strokeWidth / 2;
       return x >= minX && x <= maxX && y >= minY && y <= maxY;
-        case "image":
+    case "image":
       // Image elements use bounding box detection
       const imgMinX = Math.min(x1, x2);
       const imgMaxX = Math.max(x1, x2);
       const imgMinY = Math.min(y1, y2);
       const imgMaxY = Math.max(y1, y2);
       return x >= imgMinX && x <= imgMaxX && y >= imgMinY && y <= imgMaxY;
-      
+
     case "stickyNote":
       // Sticky note elements use bounding box detection
       const noteMinX = Math.min(x1, x2);
@@ -58,7 +62,7 @@ export function isWithinElement(x, y, element) {
       const noteMinY = Math.min(y1, y2);
       const noteMaxY = Math.max(y1, y2);
       return x >= noteMinX && x <= noteMaxX && y >= noteMinY && y <= noteMaxY;
-      
+
     case "circle":
       const width = x2 - x1 + strokeWidth;
       const height = y2 - y1 + strokeWidth;
@@ -95,33 +99,33 @@ export function getElementPosition(x, y, elements) {
   return elements.filter((element) => isWithinElement(x, y, element)).at(-1);
 }
 
-export function createElement(x1, y1, x2, y2, style, tool) {
+export function createElement(x1, y1, x2, y2, style = {}, tool = "rectangle") {
   const baseElement = { id: uuid(), x1, y1, x2, y2, ...style, tool };
-  
+
   // Add special properties for different tools
   if (tool === "draw") {
     return { ...baseElement, points: [{ x: x1, y: y1 }] };
   }
-  
+
   if (tool === "text") {
     return { ...baseElement, text: "", fontSize: 16, fontFamily: "Arial" };
   }
-  
+
   if (tool === "image") {
     return { ...baseElement, imageData: null, imageUrl: null };
   }
-  
+
   if (tool === "stickyNote") {
-    return { 
-      ...baseElement, 
-      title: "", 
-      content: "", 
+    return {
+      ...baseElement,
+      title: "",
+      content: "",
       noteColor: "#fef3c7", // Default yellow note color
       textColor: "#451a03", // Default dark brown text
-      opacity: 0.85 // Default translucent opacity
+      opacity: 0.85, // Default translucent opacity
     };
   }
-  
+
   return baseElement;
 }
 
@@ -131,10 +135,12 @@ export function updateElement(
   setElementsFunc,
   isActionOngoing // Corresponds to 'overwrite' for history: true if action is ongoing, false if finalizing
 ) {
-  setElementsFunc(prevElements => {
-    const index = prevElements.findIndex(el => el.id === id);
+  setElementsFunc((prevElements) => {
+    const index = prevElements.findIndex((el) => el.id === id);
     if (index === -1) {
-      console.warn(`[updateElement] Element with id ${id} not found for update.`);
+      console.warn(
+        `[updateElement] Element with id ${id} not found for update.`
+      );
       return prevElements; // Return previous state if element not found
     }
     const newElements = [...prevElements];
@@ -190,9 +196,9 @@ export function moveElement(element, factorX, factorY = null) {
 
   // For draw tool elements, also move all points in the drawing path
   if (element.tool === "draw" && element.points && element.points.length > 0) {
-    movedElement.points = element.points.map(point => ({
+    movedElement.points = element.points.map((point) => ({
       x: point.x + factorX,
-      y: point.y + deltaY
+      y: point.y + deltaY,
     }));
   }
 
@@ -258,66 +264,77 @@ export function adjustCoordinates(element) {
 }
 
 // Helper function to calculate minimum height needed for text with wrapping
-function calculateMinTextHeight(text, width, fontSize, fontFamily = 'Arial') {
-  if (!text || text.trim() === '') return fontSize * 1.2; // Minimum one line
-  
+function calculateMinTextHeight(text, width, fontSize, fontFamily = "Arial") {
+  if (!text || text.trim() === "") return fontSize * 1.2; // Minimum one line
+
   // Create a temporary canvas to measure text
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
   ctx.font = `${fontSize}px ${fontFamily}`;
-  
+
   const lineHeight = fontSize * 1.2;
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   let totalLines = 0;
-  
-  lines.forEach(line => {
-    if (line.trim() === '') {
+
+  lines.forEach((line) => {
+    if (line.trim() === "") {
       totalLines += 1; // Empty line still takes space
       return;
     }
-    
+
     // Calculate how many lines this text will wrap to
-    const words = line.split(' ');
-    let currentLine = '';
+    const words = line.split(" ");
+    let currentLine = "";
     let lineCount = 0;
-    
+
     for (let i = 0; i < words.length; i++) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+      const testLine = currentLine + (currentLine ? " " : "") + words[i];
       const metrics = ctx.measureText(testLine);
-      
-      if (metrics.width > width && currentLine !== '') {
+
+      if (metrics.width > width && currentLine !== "") {
         lineCount++;
         currentLine = words[i];
       } else {
         currentLine = testLine;
       }
     }
-    
+
     if (currentLine) {
       lineCount++;
     }
-    
+
     totalLines += Math.max(1, lineCount); // At least one line per paragraph
   });
-  
+
   return totalLines * lineHeight;
 }
 
 // Helper function to get standard resize coordinates (non-text elements)
-function getStandardResize(corner, type, x, y, padding, element, offset, elementOffset) {
+function getStandardResize(
+  corner,
+  type,
+  x,
+  y,
+  padding,
+  element,
+  offset,
+  elementOffset
+) {
   // Validate inputs
   if (!isFinite(x) || !isFinite(y) || !element || !offset || !elementOffset) {
-    console.warn("Invalid inputs to getStandardResize, returning original coordinates");
+    console.warn(
+      "Invalid inputs to getStandardResize, returning original coordinates"
+    );
     return {
       x1: element?.x1 || 0,
       y1: element?.y1 || 0,
       x2: element?.x2 || 100,
-      y2: element?.y2 || 100
+      y2: element?.y2 || 100,
     };
   }
-  
+
   const { x1, x2, y1, y2 } = element;
-  
+
   const getPadding = (condition) => {
     return condition ? padding : padding * -1;
   };
@@ -339,53 +356,53 @@ function getStandardResize(corner, type, x, y, padding, element, offset, element
         y2: getType(y, y2, elementOffset.y2),
       };
     case "bb":
-      return { 
-        x1, 
-        y1, 
-        x2, 
-        y2: y + getPadding(y < y1) 
+      return {
+        x1,
+        y1,
+        x2,
+        y2: y + getPadding(y < y1),
       };
     case "rr":
-      return { 
-        x1, 
-        y1, 
-        x2: x + getPadding(x < x1), 
-        y2 
+      return {
+        x1,
+        y1,
+        x2: x + getPadding(x < x1),
+        y2,
       };
     case "ll":
-      return { 
-        x1: x + getPadding(x < x2), 
-        y1, 
-        x2, 
-        y2 
+      return {
+        x1: x + getPadding(x < x2),
+        y1,
+        x2,
+        y2,
       };
     case "tl":
-      return { 
-        x1: x + getPadding(x < x2), 
-        y1: y + getPadding(y < y2), 
-        x2, 
-        y2 
+      return {
+        x1: x + getPadding(x < x2),
+        y1: y + getPadding(y < y2),
+        x2,
+        y2,
       };
     case "tr":
-      return { 
-        x1, 
-        y1: y + getPadding(y < y2), 
-        x2: x + getPadding(x < x1), 
-        y2 
+      return {
+        x1,
+        y1: y + getPadding(y < y2),
+        x2: x + getPadding(x < x1),
+        y2,
       };
     case "bl":
-      return { 
-        x1: x + getPadding(x < x2), 
-        y1, 
-        x2, 
-        y2: y + getPadding(y < y1) 
+      return {
+        x1: x + getPadding(x < x2),
+        y1,
+        x2,
+        y2: y + getPadding(y < y1),
       };
     case "br":
-      return { 
-        x1, 
-        y1, 
-        x2: x + getPadding(x < x1), 
-        y2: y + getPadding(y < y1) 
+      return {
+        x1,
+        y1,
+        x2: x + getPadding(x < x1),
+        y2: y + getPadding(y < y1),
       };
     case "l1":
       return { x1: x, y1: y, x2, y2 };
@@ -410,22 +427,37 @@ export function resizeValue(
   // Special handling for text elements - intelligent text box behavior
   if (tool === "text") {
     // Validate inputs to prevent NaN/Infinity issues
-    if (!isFinite(x) || !isFinite(y) || !isFinite(offset.x) || !isFinite(offset.y)) {      return {
+    if (
+      !isFinite(x) ||
+      !isFinite(y) ||
+      !isFinite(offset.x) ||
+      !isFinite(offset.y)
+    ) {
+      return {
         x1: element.x1,
         y1: element.y1,
         x2: element.x2,
         y2: element.y2,
         fontSize: element.fontSize || 24,
         text: element.text,
-        fontFamily: element.fontFamily
+        fontFamily: element.fontFamily,
       };
     }
-    
+
     const originalFontSize = elementOffset.fontSize || 24;
-    
+
     // Get the standard resize coordinates for the bounding box first
-    const standardResize = getStandardResize(corner, type, x, y, padding, element, offset, elementOffset);
-    
+    const standardResize = getStandardResize(
+      corner,
+      type,
+      x,
+      y,
+      padding,
+      element,
+      offset,
+      elementOffset
+    );
+
     // Validate the coordinates before proceeding
     const validatedResize = {
       x1: isFinite(standardResize.x1) ? standardResize.x1 : element.x1,
@@ -433,11 +465,11 @@ export function resizeValue(
       x2: isFinite(standardResize.x2) ? standardResize.x2 : element.x2,
       y2: isFinite(standardResize.y2) ? standardResize.y2 : element.y2,
     };
-    
+
     // Ensure minimum dimensions (prevent zero or negative width/height)
     const minWidth = 40; // Minimum width for readable text
     const minHeight = 25; // Minimum height for readable text
-    
+
     if (Math.abs(validatedResize.x2 - validatedResize.x1) < minWidth) {
       if (validatedResize.x2 > validatedResize.x1) {
         validatedResize.x2 = validatedResize.x1 + minWidth;
@@ -445,7 +477,7 @@ export function resizeValue(
         validatedResize.x1 = validatedResize.x2 + minWidth;
       }
     }
-    
+
     if (Math.abs(validatedResize.y2 - validatedResize.y1) < minHeight) {
       if (validatedResize.y2 > validatedResize.y1) {
         validatedResize.y2 = validatedResize.y1 + minHeight;
@@ -456,50 +488,56 @@ export function resizeValue(
 
     // Intelligent font size scaling based on resize type
     let newFontSize = originalFontSize;
-    
+
     if (corner === "ll" || corner === "rr") {
       // Left/Right edges: Only change width, keep font size the same
       // Text will automatically wrap to fit new width
       newFontSize = originalFontSize;
-      
     } else if (corner === "tt" || corner === "bb") {
       // Top/Bottom edges: Scale font size based on height change
       const originalHeight = Math.abs(elementOffset.y2 - elementOffset.y1);
       const newHeight = Math.abs(validatedResize.y2 - validatedResize.y1);
-      
+
       if (originalHeight > 0) {
         const heightRatio = newHeight / originalHeight;
-        newFontSize = Math.max(8, Math.min(200, originalFontSize * heightRatio));
+        newFontSize = Math.max(
+          8,
+          Math.min(200, originalFontSize * heightRatio)
+        );
       }
-      
-    } else if (corner === "br" || corner === "tr" || corner === "bl" || corner === "tl") {
+    } else if (
+      corner === "br" ||
+      corner === "tr" ||
+      corner === "bl" ||
+      corner === "tl"
+    ) {
       // Corner resize: Scale font based on area change for proportional scaling
       const originalWidth = Math.abs(elementOffset.x2 - elementOffset.x1);
       const originalHeight = Math.abs(elementOffset.y2 - elementOffset.y1);
       const originalArea = originalWidth * originalHeight;
-      
+
       const newWidth = Math.abs(validatedResize.x2 - validatedResize.x1);
       const newHeight = Math.abs(validatedResize.y2 - validatedResize.y1);
       const newArea = newWidth * newHeight;
-      
+
       if (originalArea > 0) {
         // Use square root of area ratio for more natural font scaling
         const areaRatio = Math.sqrt(newArea / originalArea);
         newFontSize = Math.max(8, Math.min(200, originalFontSize * areaRatio));
       }
     }
-    
+
     // Round font size and ensure it's finite
     newFontSize = Math.round(newFontSize);
     if (!isFinite(newFontSize)) {
       newFontSize = originalFontSize;
     }
-    
+
     return {
       ...validatedResize,
       fontSize: newFontSize,
       text: element.text,
-      fontFamily: element.fontFamily
+      fontFamily: element.fontFamily,
     };
   }
 
@@ -507,7 +545,13 @@ export function resizeValue(
     return condition ? padding : padding * -1;
   };
 
-  const getType = (y, coordinate, originalCoordinate, eleOffset, te = false) => {
+  const getType = (
+    y,
+    coordinate,
+    originalCoordinate,
+    eleOffset,
+    te = false
+  ) => {
     if (type == "default") return originalCoordinate;
 
     const def = coordinate - y;
@@ -623,20 +667,32 @@ export function getSelectionBounds(selectedElements) {
   return { x1: minX, y1: minY, x2: maxX, y2: maxY };
 }
 
-export function deleteMultipleElements(selectedElements, setState, setSelectedElement, setSelectedElements) {
+export function deleteMultipleElements(
+  selectedElements,
+  setState,
+  setSelectedElement,
+  setSelectedElements
+) {
   if (selectedElements.length === 0) return;
 
-  const selectedIds = selectedElements.map(el => el.id);
-  setState((prevState) => prevState.filter((element) => !selectedIds.includes(element.id)));
+  const selectedIds = selectedElements.map((el) => el.id);
+  setState((prevState) =>
+    prevState.filter((element) => !selectedIds.includes(element.id))
+  );
   setSelectedElement(null);
   setSelectedElements([]);
 }
 
-export function updateMultipleElements(selectedElements, styleUpdates, setState, state) {
+export function updateMultipleElements(
+  selectedElements,
+  styleUpdates,
+  setState,
+  state
+) {
   if (selectedElements.length === 0) return;
 
-  const selectedIds = selectedElements.map(el => el.id);
-  setState((prevState) => 
+  const selectedIds = selectedElements.map((el) => el.id);
+  setState((prevState) =>
     prevState.map((element) => {
       if (selectedIds.includes(element.id)) {
         return { ...element, ...styleUpdates };
@@ -646,26 +702,31 @@ export function updateMultipleElements(selectedElements, styleUpdates, setState,
   );
 }
 
-export function duplicateMultipleElements(selectedElements, setState, setSelectedElements, factor) {
+export function duplicateMultipleElements(
+  selectedElements,
+  setState,
+  setSelectedElements,
+  factor
+) {
   if (selectedElements.length === 0) return;
 
   const duplicatedElements = [];
-  
+
   setState((prevState) => {
     const newElements = [...prevState];
-    
+
     selectedElements.forEach((element) => {
-      const duplicated = { 
-        ...moveElement(element, factor), 
-        id: uuid() 
+      const duplicated = {
+        ...moveElement(element, factor),
+        id: uuid(),
       };
       duplicatedElements.push(duplicated);
       newElements.push(duplicated);
     });
-    
+
     return newElements;
   });
-  
+
   setSelectedElements(duplicatedElements);
 }
 
@@ -674,68 +735,78 @@ let clipboardData = null;
 
 export function copyElements(selectedElements) {
   if (!selectedElements || selectedElements.length === 0) return false;
-  
+
   // Create a deep copy of the elements to avoid reference issues
-  clipboardData = selectedElements.map(element => ({
+  clipboardData = selectedElements.map((element) => ({
     ...element,
     // Remove the id so paste will create new ids
-    id: undefined
+    id: undefined,
   }));
-  
+
   // Store in localStorage for persistence across sessions
   try {
-    localStorage.setItem('clipboardData', JSON.stringify(clipboardData));
+    localStorage.setItem("clipboardData", JSON.stringify(clipboardData));
   } catch (error) {
-    console.warn('Failed to store clipboard data:', error);
+    console.warn("Failed to store clipboard data:", error);
   }
-  
+
   return true;
 }
 
-export function pasteElements(setState, setSelectedElements, setSelectedElement, positionOrOffset = { x: 20, y: 20 }) {
+export function pasteElements(
+  setState,
+  setSelectedElements,
+  setSelectedElement,
+  positionOrOffset = { x: 20, y: 20 }
+) {
   // Try to get clipboard data from memory or localStorage
   let dataToUse = clipboardData;
   if (!dataToUse || dataToUse.length === 0) {
     try {
-      const stored = localStorage.getItem('clipboardData');
+      const stored = localStorage.getItem("clipboardData");
       if (stored) {
         dataToUse = JSON.parse(stored);
       }
     } catch (error) {
-      console.warn('Failed to parse clipboard data from localStorage:', error);
+      console.warn("Failed to parse clipboard data from localStorage:", error);
     }
   }
-  
+
   if (!dataToUse || dataToUse.length === 0) return false;
-  
+
   const pastedElements = [];
-  
+
   setState((prevState) => {
     const newElements = [...prevState];
-      // Determine if we're using position-based or offset-based pasting
-    const isPositionBased = positionOrOffset && (positionOrOffset.x > 100 || positionOrOffset.y > 100);
-    
+    // Determine if we're using position-based or offset-based pasting
+    const isPositionBased =
+      positionOrOffset &&
+      (positionOrOffset.x > 100 || positionOrOffset.y > 100);
+
     // Calculate the bounds of the copied elements to center them at cursor
     let bounds = null;
     if (isPositionBased && dataToUse.length > 0) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
-      dataToUse.forEach(element => {
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      dataToUse.forEach((element) => {
         minX = Math.min(minX, element.x1, element.x2);
         minY = Math.min(minY, element.y1, element.y2);
         maxX = Math.max(maxX, element.x1, element.x2);
         maxY = Math.max(maxY, element.y1, element.y2);
       });
-      
+
       bounds = {
         centerX: (minX + maxX) / 2,
-        centerY: (minY + maxY) / 2
+        centerY: (minY + maxY) / 2,
       };
     }
-    
+
     dataToUse.forEach((element) => {
       let offsetX, offsetY;
-      
+
       if (isPositionBased) {
         // Position-based: paste at cursor position (center the content at cursor)
         offsetX = positionOrOffset.x - bounds.centerX;
@@ -745,7 +816,7 @@ export function pasteElements(setState, setSelectedElements, setSelectedElement,
         offsetX = positionOrOffset.x || 20;
         offsetY = positionOrOffset.y || 20;
       }
-      
+
       const pasted = {
         ...element,
         id: uuid(),
@@ -755,19 +826,19 @@ export function pasteElements(setState, setSelectedElements, setSelectedElement,
         y2: element.y2 + offsetY,
         // For draw tool with points, also offset the points
         ...(element.points && {
-          points: element.points.map(point => ({
+          points: element.points.map((point) => ({
             x: point.x + offsetX,
-            y: point.y + offsetY
-          }))
-        })
+            y: point.y + offsetY,
+          })),
+        }),
       };
       pastedElements.push(pasted);
       newElements.push(pasted);
     });
-    
+
     return newElements;
   });
-  
+
   // Select the pasted elements
   setSelectedElements(pastedElements);
   if (pastedElements.length === 1) {
@@ -775,6 +846,6 @@ export function pasteElements(setState, setSelectedElements, setSelectedElement,
   } else if (pastedElements.length > 1) {
     setSelectedElement(pastedElements[0]); // Set primary selection to first pasted element
   }
-  
+
   return true;
 }
