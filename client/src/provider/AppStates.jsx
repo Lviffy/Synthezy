@@ -69,10 +69,14 @@ export function AppContextProvider({ children }) {
   
   // AI Panel state
   const [showAIPanel, setShowAIPanel] = useState(false);
-  
-  // Pen tool state
+    // Pen tool state
   const [selectedPen, setSelectedPen] = useState(PEN_TYPES.REGULAR);
   const [penProperties, setPenProperties] = useState(DEFAULT_PEN_STYLES[PEN_TYPES.REGULAR]);
+
+  // Update pen properties when selected pen changes
+  useEffect(() => {
+    setPenProperties(DEFAULT_PEN_STYLES[selectedPen]);
+  }, [selectedPen]);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null);
