@@ -403,23 +403,9 @@ export function AppContextProvider({ children }) {
         toolAction,
       },
     ],
-  ];useEffect(() => {
-    if (session) {
-      // Set up socket listeners for collaboration
-      const handleSetElements = (data) => {
-        if (data && Array.isArray(data)) {
-          setElements(data, true, false);
-        }
-      };
+  ];
 
-      socket.on("setElements", handleSetElements);
-      
-      // Cleanup listeners when session ends
-      return () => {
-        socket.off("setElements", handleSetElements);
-      };
-    }
-  }, [session, setElements]);
+
   return (    <AppContext.Provider
       value={{        action,
         setAction,
