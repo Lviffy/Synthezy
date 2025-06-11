@@ -37,6 +37,7 @@ import {
 } from "../helper/element";
 import useKeys from "./useKeys";
 import { PEN_TYPES, PEN_PROPERTIES } from "../global/penStyles"; // Added import
+import { socket } from "../api/socket";
 
 export default function useCanvas() {  const {
     selectedTool,
@@ -101,6 +102,145 @@ export default function useCanvas() {  const {
   const [smoothTranslate, setSmoothTranslate] = useState({ x: 0, y: 0 });
   const translateAnimationRef = useRef(null);
   const lastTranslateUpdate = useRef(0);
+
+ // Track if we're currently handling a received update
+const isReceivingUpdate = useRef(false);
+// const lastSentElements = useRef(null);
+// const pendingUpdates = useRef([]);
+const lastSentHash = useRef(null);
+const socketConnected = useRef(false);
+
+const joinedRoomRef = useRef(null); // Keep track of the room we've successfully joined
+
+
+
+// Effect for tracking socket connection status
+useEffect(() => {
+  const handleConnect = () => {
+    console.log("[Canvas] Socket connected");
+    socketConnected.current = true;
+    if (session) {
+      console.log("[Canvas] Re-joining room after reconnect:", session);
+      socket.emit("join", session);
+    }
+  };
+  
+  const handleDisconnect = () => {
+    console.log("[Canvas] Socket disconnected");
+    socketConnected.current = false;
+  };
+
+  socket.on("connect", handleConnect);
+  socket.on("disconnect", handleDisconnect);
+  
+  // Initial status
+  socketConnected.current = socket.connected;
+  console.log("[Canvas] Initial socket connection status:", socketConnected.current);
+
+  return () => {
+    socket.off("connect", handleConnect);
+    socket.off("disconnect", handleDisconnect);
+  };
+}, [session]);
+
+// Simple hash function to check if elements array has changed
+const hashElements = (elements) => {
+  if (!elements) return "";
+  try {
+    return JSON.stringify(elements.map(el => ({ id: el.id, lastModified: el.lastModified || Date.now() })));
+  } catch (err) {
+    console.error("[Canvas] Error hashing elements:", err);
+    return Date.now().toString(); // Fallback
+  }
+};
+
+// Effect to handle sending element updates to the server
+useEffect(() => {
+  console.log("[Canvas Send] Running with isReceivingUpdate:", isReceivingUpdate.current);
+  
+  // Don't send while receiving updates or if not in a session
+  if (isReceivingUpdate.current || !session) return;
+  
+  // Don't send if socket not connected
+  if (!socketConnected.current) {
+    console.log("[Canvas Send] Socket not connected, can't send update");
+    return;
+  }
+  
+  // Don't send if elements are invalid
+  if (!elements || !Array.isArray(elements)) {
+    console.log("[Canvas Send] Elements invalid, can't send");
+    return;
+  }
+  
+  // Calculate a hash to avoid duplicate sends
+  const currentHash = hashElements(elements);
+  if (currentHash === lastSentHash.current) {
+    // console.log("[Canvas Send] Hash unchanged, skipping send");
+    return;
+  }
+  
+  console.log("[Canvas Send] Scheduling element update send");
+  const timer = setTimeout(() => {
+    if (socket.connected) {
+      console.log(`[Canvas Send] Emitting ${elements.length} elements to room ${session}`);
+      socket.emit("getElements", { elements, room: session });
+      lastSentHash.current = currentHash;
+    } else {
+      console.log("[Canvas Send] Socket not connected when trying to send");
+    }
+  }, 50);
+  
+  return () => clearTimeout(timer);
+}, [elements, session]);
+
+
+// Effect to handle receiving updates from the server
+useEffect(() => {
+  if (!session) {
+    console.log("[Canvas Receive] No session, not setting up listener");
+    return;
+  }
+  
+  console.log("[Canvas Receive] Setting up 'setElements' listener for session:", session);
+  
+  const handleSetElements = (receivedElements) => {
+    console.log(`[Canvas Receive] Got ${receivedElements?.length || 0} elements`);
+    
+    if (!receivedElements || !Array.isArray(receivedElements)) {
+      console.log("[Canvas Receive] Invalid elements received");
+      return;
+    }
+    
+    isReceivingUpdate.current = true;
+    console.log("[Canvas Receive] Set isReceivingUpdate to true");
+    
+    // Use the setElements from context with correct parameters
+    setElements(receivedElements, true, false);
+    
+    // Reset the receiving flag after a short delay
+    setTimeout(() => {
+      isReceivingUpdate.current = false;
+      console.log("[Canvas Receive] Reset isReceivingUpdate to false");
+    }, 100);
+  };
+  
+  socket.on("setElements", handleSetElements);
+  
+  // Join the session when this effect runs
+  if (socket.connected) {
+    console.log(`[Canvas Receive] Joining room ${session}`);
+    socket.emit("join", session); 
+  } else {
+    console.log("[Canvas Receive] Socket not connected, can't join room");
+  }
+  
+  return () => {
+    console.log("[Canvas Receive] Removing 'setElements' listener");
+    socket.off("setElements", handleSetElements);
+  };
+}, [session, setElements]);
+
     // Helper function to get tool by number (1-12)
   const getToolByNumber = (number) => {
     let toolCounter = 0;
@@ -1219,7 +1359,7 @@ export default function useCanvas() {  const {
       setSelectedElement(null);
       setSelectedElements([]);
     }
-  }, [selectedTool]);  // Cursor management useEffect
+  }, [selectedTool, setSelectedElement, setSelectedElements]);  // Cursor management useEffect
   useEffect(() => {
     console.log("Cursor effect triggered - selectedTool:", selectedTool, "action:", action);
     
