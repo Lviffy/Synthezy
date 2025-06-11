@@ -3,32 +3,50 @@ import rough from "roughjs";
 // Image cache to prevent creating new Image objects repeatedly
 const imageCache = new Map();
 
-export const shapes = {
-  arrow: (x1, y1, x2, y2, roughCanvas, options) => {
-    // Draw the main line
-    roughCanvas.line(x1, y1, x2, y2, options);
+export const shapes = {  arrow: (x1, y1, x2, y2, roughCanvas, options) => {
+    const context = roughCanvas.canvas.getContext('2d');
+    const strokeWidth = options.strokeWidth || 2;
     
-    // Calculate arrow head
-    const headlen = 10;
+    // Make arrowhead proportional but keep it sharp - increased size
+    const headlen = Math.max(15, strokeWidth * 5);
     const angle = Math.atan2(y2 - y1, x2 - x1);
     
-    // Draw arrow head lines
-    roughCanvas.line(
-      x2,
-      y2,
-      x2 - headlen * Math.cos(angle - Math.PI / 7),
-      y2 - headlen * Math.sin(angle - Math.PI / 7),
-      options
-    );
+    // Calculate where the main line should end (before the arrowhead starts)
+    const lineEndX = x2 - (headlen * 0.7) * Math.cos(angle);
+    const lineEndY = y2 - (headlen * 0.7) * Math.sin(angle);
     
-    roughCanvas.line(
-      x2,
-      y2,
-      x2 - headlen * Math.cos(angle + Math.PI / 7),
-      y2 - headlen * Math.sin(angle + Math.PI / 7),
-      options
-    );
-  },  line: (x1, y1, x2, y2, roughCanvas, options) => {
+    // Draw the main line (shortened to connect properly with arrowhead)
+    roughCanvas.line(x1, y1, lineEndX, lineEndY, options);
+    
+    // Calculate arrowhead triangle points
+    const arrowTip = { x: x2, y: y2 };
+    const arrowBase1 = {
+      x: x2 - headlen * Math.cos(angle - Math.PI / 6),
+      y: y2 - headlen * Math.sin(angle - Math.PI / 6)
+    };
+    const arrowBase2 = {
+      x: x2 - headlen * Math.cos(angle + Math.PI / 6),
+      y: y2 - headlen * Math.sin(angle + Math.PI / 6)
+    };
+    
+    // Draw filled triangle arrowhead using native canvas for sharpness
+    context.save();
+    context.fillStyle = options.stroke || '#000000';
+    context.strokeStyle = options.stroke || '#000000';
+    context.lineWidth = 1;
+    context.lineJoin = 'miter';
+    context.miterLimit = 10;
+    
+    context.beginPath();
+    context.moveTo(arrowTip.x, arrowTip.y);
+    context.lineTo(arrowBase1.x, arrowBase1.y);
+    context.lineTo(arrowBase2.x, arrowBase2.y);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    
+    context.restore();
+  },line: (x1, y1, x2, y2, roughCanvas, options) => {
     // Handle dotted lines with custom round dots
     if (options.strokeLineDash && options.strokeLineDash.length === 2) {
       const context = roughCanvas.canvas.getContext('2d');

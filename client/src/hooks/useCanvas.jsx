@@ -966,22 +966,22 @@ export default function useCanvas() {  const {
       );
     }
 
-    context.restore();
+    context.restore();    // Set cursor style - DISABLED: Now using CSS custom property system above
+    // if (selectedTool === "eraser") {
+    //   canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21H7Z"/><path d="M22 21H7"/></svg>') 12 12, auto`;
+    // } else if (inCorner) {
+    //   canvas.style.cursor = cornerCursor(inCorner.slug);
+    // } else if (action == "translate" || keys.has(" ") || selectedTool == "hand") {
+    //   canvas.style.cursor = "grabbing";
+    // } else if (selectedTool == "selection" && isInElement) {
+    //   canvas.style.cursor = "move";
+    // } else if (selectedTool == "text") {
+    //   canvas.style.cursor = "text";
+    // } else {
+    //   canvas.style.cursor = "default";
+    // }
 
-    // Set cursor style
-    if (selectedTool === "eraser") {
-      canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21H7Z"/><path d="M22 21H7"/></svg>') 12 12, auto`;
-    } else if (inCorner) {
-      canvas.style.cursor = cornerCursor(inCorner.slug);
-    } else if (action == "translate" || keys.has(" ") || selectedTool == "hand") {
-      canvas.style.cursor = "grabbing";
-    } else if (selectedTool == "selection" && isInElement) {
-      canvas.style.cursor = "move";
-    } else if (selectedTool == "text") {
-      canvas.style.cursor = "text";
-    } else {
-      canvas.style.cursor = "default";
-    }  }, [
+  }, [
     elements,
     selectedElement,
     selectedElements,
@@ -1219,37 +1219,71 @@ export default function useCanvas() {  const {
       setSelectedElement(null);
       setSelectedElements([]);
     }
-  }, [selectedTool]);
-
+  }, [selectedTool]);  // Cursor management useEffect
   useEffect(() => {
+    console.log("Cursor effect triggered - selectedTool:", selectedTool, "action:", action);
+    
     if (action == "translate") {
       document.documentElement.style.setProperty("--canvas-cursor", "grabbing");
+      console.log("Set cursor to: grabbing");
     } else if (action.startsWith("resize")) {
       document.documentElement.style.setProperty("--canvas-cursor", cursor);
+      console.log("Set cursor to:", cursor);
     } else if (
       (keys.has(" ") || selectedTool == "hand") &&
       action != "move" &&
       action != "resize"
     ) {
       document.documentElement.style.setProperty("--canvas-cursor", "grab");
+      console.log("Set cursor to: grab");
+    } else if (selectedTool === "text") {
+      document.documentElement.style.setProperty("--canvas-cursor", "text");
+      console.log("Set cursor to: text");
+    } else if (selectedTool === "eraser") {
+      document.documentElement.style.setProperty("--canvas-cursor", "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 576 512\"><path fill=\"currentColor\" d=\"M290.7 57.4L57.4 290.7c-25 25-25 65.5 0 90.5l80 80c12 12 28.3 18.7 45.3 18.7H512c17.7 0 32-14.3 32-32s-14.3-32-32-32H387.9l130.7-130.6c25-25 25-65.5 0-90.5L381.3 57.4c-25-25-65.5-25-90.5 0zm6.7 358.6H182.6l-80-80 124.7-124.7 137.4 137.4-67.3 67.3z\"/></svg>') 12 12, auto");
+      console.log("Set cursor to: eraser SVG");
+    } else if (selectedTool === "draw") {
+      document.documentElement.style.setProperty("--canvas-cursor", "crosshair");
+      console.log("Set cursor to: crosshair (draw)");
+    } else if (selectedTool === "rectangle") {
+      document.documentElement.style.setProperty("--canvas-cursor", "copy");
+      console.log("Set cursor to: copy (rectangle)");
+    } else if (selectedTool === "circle") {
+      document.documentElement.style.setProperty("--canvas-cursor", "cell");
+      console.log("Set cursor to: cell (circle)");    } else if (selectedTool === "diamond") {
+      document.documentElement.style.setProperty("--canvas-cursor", "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><defs><linearGradient id=\"diamondGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"%23e3f2fd\"/><stop offset=\"50%\" stop-color=\"%23bbdefb\"/><stop offset=\"100%\" stop-color=\"%2390caf9\"/></linearGradient></defs><path d=\"M12 3l7 6-7 12-7-12z\" fill=\"url(%23diamondGrad)\" stroke=\"%232196f3\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M12 3l7 6h-14z\" fill=\"%23ffffff\" fill-opacity=\"0.3\"/><path d=\"M5 9l7 12 7-12\" stroke=\"%232196f3\" stroke-width=\"0.5\" fill=\"none\"/></svg>') 12 12, crosshair");
+      console.log("Set cursor to: enhanced diamond SVG");
+    } else if (selectedTool === "arrow") {
+      document.documentElement.style.setProperty("--canvas-cursor", "alias");
+      console.log("Set cursor to: alias (arrow)");
+    } else if (selectedTool === "line") {
+      document.documentElement.style.setProperty("--canvas-cursor", "row-resize");
+      console.log("Set cursor to: row-resize (line)");
+    } else if (selectedTool === "stickyNote") {
+      document.documentElement.style.setProperty("--canvas-cursor", "text");
+      console.log("Set cursor to: text (stickyNote)");    } else if (selectedTool === "image") {
+      document.documentElement.style.setProperty("--canvas-cursor", "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\" fill=\"%23f0f0f0\" stroke=\"%23333\" stroke-width=\"1.5\"/><path d=\"M8 11l2 2 4-4 6 6v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-1z\" fill=\"%23ddd\"/><circle cx=\"8.5\" cy=\"9.5\" r=\"1.5\" fill=\"%23bbb\"/><circle cx=\"18\" cy=\"6\" r=\"4\" fill=\"%2300aa00\" stroke=\"%23fff\" stroke-width=\"1\"/><path d=\"M16 6h4M18 4v4\" stroke=\"%23fff\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg>') 12 12, crosshair");
+      console.log("Set cursor to: custom image with plus SVG");
     } else if (selectedTool !== "selection") {
-      document.documentElement.style.setProperty(
-        "--canvas-cursor",
-        "crosshair"
-      );
+      document.documentElement.style.setProperty("--canvas-cursor", "crosshair");
+      console.log("Set cursor to: crosshair (default)");
     } else if (inCorner) {
-      document.documentElement.style.setProperty(
-        "--canvas-cursor",
-        cornerCursor(inCorner.slug)
-      );
+      document.documentElement.style.setProperty("--canvas-cursor", cornerCursor(inCorner.slug));
+      console.log("Set cursor to:", cornerCursor(inCorner.slug), "(corner)");
     } else if (isInElement) {
       document.documentElement.style.setProperty("--canvas-cursor", "move");
-    } else if (selectedTool === "eraser") {
-      document.documentElement.style.setProperty("--canvas-cursor", "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 576 512\"><path fill=\"currentColor\" d=\"M290.7 57.4L57.4 290.7c-25 25-25 65.5 0 90.5l80 80c12 12 28.3 18.7 45.3 18.7H512c17.7 0 32-14.3 32-32s-14.3-32-32-32H387.9l130.7-130.6c25-25 25-65.5 0-90.5L381.3 57.4c-25-25-65.5-25-90.5 0zm6.7 358.6H182.6l-80-80 124.7-124.7 137.4 137.4-67.3 67.3z\"/></svg>') 12 12, auto"); // 12 12 is hotspot
+      console.log("Set cursor to: move (in element)");
     } else {
       document.documentElement.style.setProperty("--canvas-cursor", "default");
+      console.log("Set cursor to: default");
     }
-  }, [keys, selectedTool, action, isInElement, inCorner]);  useEffect(() => {
+    
+    // Also log the actual CSS value that was set
+    const actualCursorValue = document.documentElement.style.getPropertyValue("--canvas-cursor");
+    console.log("Actual cursor value set:", actualCursorValue);
+  }, [keys, selectedTool, action, isInElement, inCorner, cursor]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -1263,12 +1297,11 @@ export default function useCanvas() {  const {
     };
     window.addEventListener("wheel", preventBrowserZoom, {
       passive: false,
-    });
-
-    return () => {
+    });    return () => {
       canvas.removeEventListener("wheel", handleWheel);
       window.removeEventListener("wheel", preventBrowserZoom);
-    };  }, [handleWheel]);
+    };
+  }, [handleWheel]);
   // Helper function to start laser pointer animation
   const startLaserAnimation = useCallback(() => {
     if (laserAnimationRef.current) return; // Already running
