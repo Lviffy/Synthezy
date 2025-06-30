@@ -1,5 +1,5 @@
 import useCanvas from "../hooks/useCanvas";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import TextInput from "./TextInput";
 import { createPortal } from "react-dom";
 

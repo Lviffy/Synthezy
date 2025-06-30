@@ -1,10 +1,12 @@
 import { motion } from "framer-motion";
 import { Xmark } from "../assets/icons"; // Import your icons
 import { useState, useEffect } from "react";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext";
 import { v4 as uuid } from "uuid";
 import { useSearchParams } from "react-router-dom";
 import { socket } from "../api/socket";
+import { useAuth } from "../hooks/useAuth";
+import drawingService from "../services/drawingService";
 
 export default function Collaboration() {
   const [searchParams, setSearchParams] = useSearchParams();

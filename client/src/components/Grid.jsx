@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useAppContext } from '../provider/AppStates';
+import { useAppContext } from "../hooks/useAppContext.js";
 import useDimension from '../hooks/useDimension';
 
 export default function Grid() {

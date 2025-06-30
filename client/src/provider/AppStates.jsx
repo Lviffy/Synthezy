@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import {
   Circle,
   Line,
@@ -20,6 +20,8 @@ import { getElementById, minmax } from "../helper/element";
 import useHistory from "../hooks/useHistory";
 import { socket } from "../api/socket";
 import { PEN_TYPES, DEFAULT_PEN_STYLES } from "../global/penStyles"; // Added
+import drawingService from "../services/drawingService";
+import { useAuth } from "../hooks/useAuth";
 
 const AppContext = createContext();
 
@@ -38,6 +40,7 @@ const isElementsInLocal = () => {
 const initialElements = isElementsInLocal();
 
 export function AppContextProvider({ children }) {
+  const { user } = useAuth(); // Get current authenticated user
   const [session, setSession] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedElements, setSelectedElements] = useState([]);
@@ -104,6 +107,66 @@ export function AppContextProvider({ children }) {
       setSelectedElement(null);
     }
   }, [elements, session, selectedElement]);
+
+  // Database integration for both solo and collaborative sessions
+  useEffect(() => {
+    // Only auto-save if user is authenticated and has elements
+    if (user && elements && elements.length > 0) {
+      const sessionToSave = session || `personal_${user._id}`; // Use personal session for solo work
+      const isCollaborative = !!session; // True if in collaboration, false if solo
+      
+      console.log('[AppStates] Auto-save triggered for session:', sessionToSave, 'Elements count:', elements.length, 'Collaborative:', isCollaborative);
+      
+      // Auto-save to database
+      const autoSave = drawingService.createAutoSave(
+        sessionToSave,
+        (error) => {
+          console.error('[AppStates] Auto-save failed:', error);
+          // Could show a notification to user here
+        }
+      );
+
+      // Throttle saves to avoid too many API calls
+      const timeoutId = setTimeout(async () => {
+        try {
+          console.log('[AppStates] Executing auto-save for elements:', elements.length);
+          await autoSave(elements);
+          console.log('[AppStates] Auto-save completed successfully');
+        } catch (error) {
+          console.error('[AppStates] Auto-save execution failed:', error);
+        }
+      }, 1000);
+
+      return () => {
+        console.log('[AppStates] Clearing auto-save timeout');
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [elements, session, user]);
+
+  // Load existing drawing when user logs in or joins a session
+  useEffect(() => {
+    const loadExistingDrawing = async () => {
+      if (user && elements.length === 0) {
+        try {
+          const sessionToLoad = session || `personal_${user._id}`; // Load personal session for solo work
+          const drawing = await drawingService.getDrawing(sessionToLoad);
+          if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
+            console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
+            setElements(drawing.data);
+          }
+        } catch (error) {
+          console.error('[AppStates] Error loading existing drawing:', error);
+          // Continue with empty canvas if loading fails
+        }
+      }
+    };
+
+    // Load drawing when user is authenticated
+    if (user) {
+      loadExistingDrawing();
+    }
+  }, [user, session, elements.length, setElements]);
 
   // Smooth zoom animation function
   const animateZoom = (targetScale, targetTranslate) => {
@@ -460,6 +523,5 @@ export function AppContextProvider({ children }) {
   );
 }
 
-export function useAppContext() {
-  return useContext(AppContext);
-}
+export { AppContext };
+export default AppContextProvider;

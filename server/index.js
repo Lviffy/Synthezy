@@ -2,18 +2,35 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+require('dotenv').config();
+
+// Import database and models
+const { connectDB, checkDBConnection } = require('./config/database');
+const Drawing = require('./models/Drawing');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const drawingRoutes = require('./routes/drawings');
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 // Enable CORS for all routes
 app.use(
   cors({
     origin: "*", // Allow all origins for testing
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: false,
   })
 );
+
+// Parse JSON bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/drawings', drawingRoutes);
 
 const server = http.createServer(app);
 
@@ -40,7 +57,7 @@ io.on("connection", (socket) => {
   socket.emit("welcome", { message: "Connected to server" });
 
   // Basic room join handler
-  socket.on("join", (room) => {
+  socket.on("join", async (room) => {
     if (!room) {
       console.log(
         `[Server] Client ${socket.id} tried to join null/undefined room.`
@@ -53,13 +70,6 @@ io.on("connection", (socket) => {
       console.log(
         `[Server] Client ${socket.id} is already in room: ${room}. Ignoring redundant join.`
       );
-      // Optionally, still send current state or user count if needed for robustness
-      // if (roomStates.has(room)) {
-      //   socket.emit("setElements", roomStates.get(room));
-      // }
-      // if (roomUsers.has(room)) {
-      //   io.to(room).emit("roomUsers", roomUsers.get(room).size);
-      // }
       return;
     }
 
@@ -82,21 +92,54 @@ io.on("connection", (socket) => {
       );
       socket.emit("setElements", existingState);
     } else {
-      console.log(`[Server] Initializing empty state for new room ${room}`);
-      roomStates.set(room, []);
-      // Optionally send empty elements if that's the desired behavior for a new client in an empty room state
-      // socket.emit("setElements", []);
+      // Try to load from database
+      try {
+        const drawing = await Drawing.findOne({ sessionId: room });
+        if (drawing && drawing.data) {
+          console.log(`[Server] Loading drawing from database for session ${room}`);
+          roomStates.set(room, drawing.data);
+          socket.emit("setElements", drawing.data);
+        } else {
+          console.log(`[Server] Initializing empty state for new room ${room}`);
+          roomStates.set(room, []);
+        }
+      } catch (error) {
+        console.error(`[Server] Error loading drawing from database:`, error);
+        console.log(`[Server] Initializing empty state for new room ${room}`);
+        roomStates.set(room, []);
+      }
     }
   });
 
-  // Handle element updates
-  socket.on("getElements", ({ elements, room }) => {
+  // Handle element updates with database persistence
+  socket.on("getElements", async ({ elements, room }) => {
     if (!room || !elements) return;
 
     console.log(
       `[Server] Received ${elements.length} elements for room ${room}`
     );
     roomStates.set(room, elements);
+
+    // Persist to database if we have a valid session
+    try {
+      // Note: For now, we'll save without authentication in socket
+      // In production, you might want to implement socket authentication
+      const existingDrawing = await Drawing.findOne({ sessionId: room });
+      
+      if (existingDrawing) {
+        existingDrawing.data = elements;
+        existingDrawing.updatedAt = new Date();
+        await existingDrawing.save();
+        console.log(`[Server] Drawing updated in database for session ${room}`);
+      } else {
+        // For new sessions without authentication, we'll create a placeholder
+        // This will be properly handled when users join through the authenticated flow
+        console.log(`[Server] Session ${room} not found in database, keeping in memory only`);
+      }
+    } catch (error) {
+      console.error(`[Server] Error saving drawing to database:`, error);
+      // Continue with in-memory storage as fallback
+    }
 
     // Broadcast to other clients in the room
     socket.to(room).emit("setElements", elements);
@@ -125,9 +168,11 @@ io.on("connection", (socket) => {
 
 // Add a simple test page
 app.get("/", (req, res) => {
+  const dbStatus = checkDBConnection();
   res.send(`
     <h1>Socket.IO Server</h1>
     <p>Server is running.</p>
+    <p>Database Status: <strong style="color: ${dbStatus.isConnected ? 'green' : 'red'}">${dbStatus.state}</strong></p>
     <button id="testBtn">Test Connection</button>
     <div id="status">Disconnected</div>
     
@@ -157,7 +202,35 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Start the server
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = checkDBConnection();
+  res.json({
+    success: true,
+    status: 'Server is running',
+    database: dbStatus,
+    timestamp: new Date().toISOString()
+  });
 });
+
+// Connect to MongoDB and start the server
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    console.log('✅ Database connected successfully');
+
+    // Start the server
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`📊 API endpoints available at http://localhost:${PORT}/api`);
+      console.log(`🔌 Socket.IO ready for connections`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();

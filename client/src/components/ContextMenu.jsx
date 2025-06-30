@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useAppContext } from '../provider/AppStates';
+import { useAppContext } from "../hooks/useAppContext.js";
 import {
   Copy,
   Cut,

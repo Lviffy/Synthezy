@@ -1,43 +1,43 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import rough from "roughjs"; // Add this import
-import { useAppContext } from "../provider/AppStates";
-import useDimension from "./useDimension";
-import { lockUI } from "../helper/ui";
 import {
-  draw,
-  drawWithAutoResize,
-  drawFocuse,
-  drawMultiSelection,
-  cornerCursor,
-  inSelectedCorner,
-  drawEraser, // Import drawEraser
-  drawLaserTrail, // Import drawLaserTrail
-} from "../helper/canvas";
-import {
+  updateElement,
   adjustCoordinates,
-  arrowMove,
-  copyElements,
-  createElement,
-  deleteElement,
-  deleteMultipleElements,
-  duplicateElement,
-  duplicateMultipleElements,
+  minmax,
   getElementById,
   getElementPosition,
-  getElementsInSelectionBounds,
-  getSelectionBounds,
-  minmax,
+  arrowMove,
   moveElement,
+  duplicateElement,
+  duplicateMultipleElements,
+  deleteElement,
+  deleteMultipleElements,
+  getElementsInSelectionBounds,
+  copyElements,
   pasteElements,
-  resizeValue,
+  createElement,
   saveElements,
-  updateElement,
   uploadElements,
-  isWithinElement, // Add this import
+  isWithinElement,
+  resizeValue
 } from "../helper/element";
+import {
+  draw,
+  inSelectedCorner,
+  cornerCursor,
+  drawFocuse,
+  drawMultiSelection,
+  drawEraser,
+  drawLaserTrail
+} from "../helper/canvas";
+import { lockUI } from "../helper/ui";
+import { useAppContext } from "../hooks/useAppContext";
+import useDimension from "./useDimension";
 import useKeys from "./useKeys";
-import { PEN_TYPES, PEN_PROPERTIES } from "../global/penStyles"; // Added import
 import { socket } from "../api/socket";
+import { PEN_TYPES } from "../global/penStyles";
+import drawingService from "../services/drawingService";
+import { useAuth } from "../hooks/useAuth";
 
 export default function useCanvas() {  const {
     selectedTool,
