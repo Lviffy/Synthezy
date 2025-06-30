@@ -40,6 +40,7 @@ const isElementsInLocal = () => {
 const initialElements = isElementsInLocal();
 
 export function AppContextProvider({ children }) {
+  const { user } = useAuth(); // Get current authenticated user
   const [session, setSession] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedElements, setSelectedElements] = useState([]);
@@ -107,35 +108,51 @@ export function AppContextProvider({ children }) {
     }
   }, [elements, session, selectedElement]);
 
-  // Database integration for collaborative sessions
+  // Database integration for both solo and collaborative sessions
   useEffect(() => {
-    if (session && elements) {
-      // Auto-save to database when in a collaborative session
+    // Only auto-save if user is authenticated and has elements
+    if (user && elements && elements.length > 0) {
+      const sessionToSave = session || `personal_${user._id}`; // Use personal session for solo work
+      const isCollaborative = !!session; // True if in collaboration, false if solo
+      
+      console.log('[AppStates] Auto-save triggered for session:', sessionToSave, 'Elements count:', elements.length, 'Collaborative:', isCollaborative);
+      
+      // Auto-save to database
       const autoSave = drawingService.createAutoSave(
-        session,
+        sessionToSave,
         (error) => {
-          console.error('Auto-save failed:', error);
+          console.error('[AppStates] Auto-save failed:', error);
           // Could show a notification to user here
         }
       );
 
       // Throttle saves to avoid too many API calls
-      const timeoutId = setTimeout(() => {
-        autoSave(elements);
+      const timeoutId = setTimeout(async () => {
+        try {
+          console.log('[AppStates] Executing auto-save for elements:', elements.length);
+          await autoSave(elements);
+          console.log('[AppStates] Auto-save completed successfully');
+        } catch (error) {
+          console.error('[AppStates] Auto-save execution failed:', error);
+        }
       }, 1000);
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        console.log('[AppStates] Clearing auto-save timeout');
+        clearTimeout(timeoutId);
+      };
     }
-  }, [elements, session]);
+  }, [elements, session, user]);
 
-  // Load existing drawing when joining a session
+  // Load existing drawing when user logs in or joins a session
   useEffect(() => {
     const loadExistingDrawing = async () => {
-      if (session && elements.length === 0) {
+      if (user && elements.length === 0) {
         try {
-          const drawing = await drawingService.getDrawing(session);
+          const sessionToLoad = session || `personal_${user._id}`; // Load personal session for solo work
+          const drawing = await drawingService.getDrawing(sessionToLoad);
           if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
-            console.log('[AppStates] Loading existing drawing from database');
+            console.log('[AppStates] Loading existing drawing from database for session:', sessionToLoad);
             setElements(drawing.data);
           }
         } catch (error) {
@@ -145,12 +162,11 @@ export function AppContextProvider({ children }) {
       }
     };
 
-    // Only load if we have a session and user is authenticated
-    const authToken = localStorage.getItem('authToken');
-    if (session && authToken) {
+    // Load drawing when user is authenticated
+    if (user) {
       loadExistingDrawing();
     }
-  }, [session, setElements, elements.length]);
+  }, [user, session, elements.length, setElements]);
 
   // Smooth zoom animation function
   const animateZoom = (targetScale, targetTranslate) => {

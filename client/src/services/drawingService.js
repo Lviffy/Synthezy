@@ -7,12 +7,24 @@ class DrawingService {
     this.baseURL = `${API_BASE_URL}/drawings`;
   }
 
+  // Helper method to get authorization headers
+  getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   // Save or update drawing data
   async saveDrawing(sessionId, data) {
     try {
+      console.log('[DrawingService] Saving drawing for session:', sessionId, 'Elements count:', data?.length || 0);
+      
       const response = await axios.post(`${this.baseURL}/${sessionId}`, {
         data: data
+      }, {
+        headers: this.getAuthHeaders()
       });
+      
+      console.log('[DrawingService] Save response:', response.data);
       
       if (response.data.success) {
         return response.data.data.drawing;
@@ -20,7 +32,8 @@ class DrawingService {
         throw new Error(response.data.message || 'Failed to save drawing');
       }
     } catch (error) {
-      console.error('Save drawing error:', error);
+      console.error('[DrawingService] Save drawing error:', error);
+      console.error('[DrawingService] Error response:', error.response?.data);
       throw new Error(
         error.response?.data?.message || 
         error.message || 
@@ -32,7 +45,9 @@ class DrawingService {
   // Retrieve existing drawing for a session
   async getDrawing(sessionId) {
     try {
-      const response = await axios.get(`${this.baseURL}/${sessionId}`);
+      const response = await axios.get(`${this.baseURL}/${sessionId}`, {
+        headers: this.getAuthHeaders()
+      });
       
       if (response.data.success) {
         return response.data.data.drawing;
@@ -57,7 +72,9 @@ class DrawingService {
   // Get all drawings for the current user
   async getUserDrawings(page = 1, limit = 10) {
     try {
-      const response = await axios.get(`${this.baseURL}?page=${page}&limit=${limit}`);
+      const response = await axios.get(`${this.baseURL}?page=${page}&limit=${limit}`, {
+        headers: this.getAuthHeaders()
+      });
       
       if (response.data.success) {
         return response.data.data;
@@ -77,7 +94,9 @@ class DrawingService {
   // Delete a drawing (only owner can delete)
   async deleteDrawing(sessionId) {
     try {
-      const response = await axios.delete(`${this.baseURL}/${sessionId}`);
+      const response = await axios.delete(`${this.baseURL}/${sessionId}`, {
+        headers: this.getAuthHeaders()
+      });
       
       if (response.data.success) {
         return true;

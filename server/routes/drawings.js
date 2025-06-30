@@ -12,6 +12,8 @@ router.post('/:sessionId', authMiddleware, async (req, res) => {
     const { sessionId } = req.params;
     const { data } = req.body;
 
+    console.log('[Drawings API] Save request for session:', sessionId, 'User:', req.user?.email, 'Elements count:', data?.length || 0);
+
     if (!sessionId) {
       return res.status(400).json({
         success: false,
@@ -74,6 +76,8 @@ router.post('/:sessionId', authMiddleware, async (req, res) => {
 router.get('/:sessionId', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
+
+    console.log('[Drawings API] Get request for session:', sessionId, 'User:', req.user?.email);
 
     if (!sessionId) {
       return res.status(400).json({
