@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import { updateElement, updateMultipleElements } from "../helper/element";
 import ModernColorPicker from "./ModernColorPicker";
 

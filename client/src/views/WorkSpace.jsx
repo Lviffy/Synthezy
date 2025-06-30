@@ -6,7 +6,7 @@ import Ui from "../components/Ui";
 // import TextInput from "../components/TextInput"; // Assuming this is used
 import ContextMenu from "../components/ContextMenu";
 import { useSearchParams } from "react-router-dom";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext";
 import { socket } from "../api/socket"; // socket is imported but not directly used here for emit
 
 export default function WorkSpace() {

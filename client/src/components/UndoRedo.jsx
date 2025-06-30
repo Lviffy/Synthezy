@@ -1,6 +1,6 @@
 import React from "react";
 import { Redo, Undo } from "../assets/icons";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 
 export default function UndoRedo() {
   const { undo, redo, history, historyIndex } = useAppContext();

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import {
   Circle,
   Line,
@@ -20,6 +20,8 @@ import { getElementById, minmax } from "../helper/element";
 import useHistory from "../hooks/useHistory";
 import { socket } from "../api/socket";
 import { PEN_TYPES, DEFAULT_PEN_STYLES } from "../global/penStyles"; // Added
+import drawingService from "../services/drawingService";
+import { useAuth } from "../hooks/useAuth";
 
 const AppContext = createContext();
 
@@ -104,6 +106,51 @@ export function AppContextProvider({ children }) {
       setSelectedElement(null);
     }
   }, [elements, session, selectedElement]);
+
+  // Database integration for collaborative sessions
+  useEffect(() => {
+    if (session && elements) {
+      // Auto-save to database when in a collaborative session
+      const autoSave = drawingService.createAutoSave(
+        session,
+        (error) => {
+          console.error('Auto-save failed:', error);
+          // Could show a notification to user here
+        }
+      );
+
+      // Throttle saves to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        autoSave(elements);
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [elements, session]);
+
+  // Load existing drawing when joining a session
+  useEffect(() => {
+    const loadExistingDrawing = async () => {
+      if (session && elements.length === 0) {
+        try {
+          const drawing = await drawingService.getDrawing(session);
+          if (drawing && drawing.data && Array.isArray(drawing.data) && drawing.data.length > 0) {
+            console.log('[AppStates] Loading existing drawing from database');
+            setElements(drawing.data);
+          }
+        } catch (error) {
+          console.error('[AppStates] Error loading existing drawing:', error);
+          // Continue with empty canvas if loading fails
+        }
+      }
+    };
+
+    // Only load if we have a session and user is authenticated
+    const authToken = localStorage.getItem('authToken');
+    if (session && authToken) {
+      loadExistingDrawing();
+    }
+  }, [session, setElements, elements.length]);
 
   // Smooth zoom animation function
   const animateZoom = (targetScale, targetTranslate) => {
@@ -460,6 +507,5 @@ export function AppContextProvider({ children }) {
   );
 }
 
-export function useAppContext() {
-  return useContext(AppContext);
-}
+export { AppContext };
+export default AppContextProvider;

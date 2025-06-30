@@ -9,7 +9,7 @@ import {
   moveElementLayer,
   updateElement,
 } from "../helper/element";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES, EDGE_STYLES, FILL_PATTERNS } from "../global/var";
 import { Backward, Delete, Duplicate, Forward, ToBack, ToFront } from "../assets/icons";
 import { PEN_TYPES, DEFAULT_PEN_STYLES, LINE_CAP_OPTIONS, STROKE_WIDTH_RANGE, OPACITY_RANGE } from "../global/penStyles"; // Added pen style imports

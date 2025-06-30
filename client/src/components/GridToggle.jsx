@@ -1,4 +1,4 @@
-import { useAppContext } from '../provider/AppStates';
+import { useAppContext } from "../hooks/useAppContext.js";
 
 export default function GridToggle() {
   const { showGrid, setShowGrid } = useAppContext();

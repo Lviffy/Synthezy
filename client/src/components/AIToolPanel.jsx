@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useAppContext } from '../provider/AppStates';
+import { useAppContext } from "../hooks/useAppContext.js";
 import { aiService } from '../utils/aiService';
 
 /**

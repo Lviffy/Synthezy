@@ -1,5 +1,5 @@
 import React from "react";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import GridToggle from "./GridToggle";
 
 export default function Zoom() {

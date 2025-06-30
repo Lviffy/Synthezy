@@ -1,4 +1,4 @@
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import Style from "./Style";
 import ToolBar from "./ToolBar";
 import Zoom from "./Zoom";

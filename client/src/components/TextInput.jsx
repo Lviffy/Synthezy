@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useAppContext } from "../provider/AppStates";
+import { useAppContext } from "../hooks/useAppContext.js";
 import { createElement } from "../helper/element";
 
 export default function TextInput({ position, onComplete, style, canvasPosition }) {
